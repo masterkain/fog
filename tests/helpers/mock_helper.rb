@@ -28,6 +28,9 @@ if Fog.mock?
     :rackspace_username               => 'rackspace_username',
     :slicehost_password               => 'slicehost_password',
     :zerigo_email                     => 'zerigo_email',
-    :zerigo_token                     => 'zerigo_token'
+    :zerigo_token                     => 'zerigo_token',
+    :dynect_customer                  => 'dynect_customer',
+    :dynect_username                  => 'dynect_username',
+    :dynect_password                  => 'dynect_password'
   })
 end

@@ -17,7 +17,8 @@ module Fog
         ::Slicehost,
         ::Terremark,
         ::TerremarkEcloud,
-        ::Zerigo
+        ::Zerigo,
+        ::Dynect
       ].select {|provider| provider.available?}
     end
 
@@ -87,3 +88,4 @@ require 'fog/bin/terremark'
 require 'fog/bin/terremark_ecloud'
 require 'fog/bin/vcloud'
 require 'fog/bin/zerigo'
+require 'fog/bin/dynect'

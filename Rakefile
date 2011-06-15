@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'bundler/setup'
 require 'date'
-require 'lib/fog'
+require './lib/fog'
 
 #############################################################################
 #

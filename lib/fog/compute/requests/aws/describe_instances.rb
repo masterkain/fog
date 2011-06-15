@@ -50,12 +50,19 @@ module Fog
         #           * 'rootDeviceType'<~String> - root device type used by AMI in [ebs, instance-store]
         #           * 'ramdiskId'<~String> - Id of ramdisk used to launch instance
         #           * 'reason'<~String> - reason for most recent state transition, or blank
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeInstances.html]
         def describe_instances(filters = {})
           unless filters.is_a?(Hash)
             Formatador.display_line("[yellow][WARN] describe_instances with #{filters.class} param is deprecated, use describe_instances('instance-id' => []) instead[/] [light_black](#{caller.first})[/]")
             filters = {'instance-id' => [*filters]}
           end
-          params = AWS.indexed_filters(filters)
+          params = {}
+          # when seeking single instance id, old param style provides more accurate data sooner
+          if filters['instance-id'] && !filters['instance-id'].is_a?(Array)
+            params.merge!('InstanceId' => filters.delete('instance-id'))
+          end
+          params.merge!(AWS.indexed_filters(filters))
 
           request({
             'Action'    => 'DescribeInstances',
@@ -74,20 +81,16 @@ module Fog
             filters = {'instance-id' => [*filters]}
           end
 
-          if filters.keys.any? {|key| key =~ /^tag/}
-            Formatador.display_line("[yellow][WARN] describe_instances tag filters are not yet mocked[/] [light_black](#{caller.first})[/]")
-            Fog::Mock.not_implemented
-          end
-
           response = Excon::Response.new
 
-          instance_set = @data[:instances].values
-
+          instance_set = self.data[:instances].values
+          instance_set = apply_tag_filters(instance_set, filters)
+          
           aliases = {
             'architecture'      => 'architecture',
             'availability-zone' => 'availabilityZone',
             'client-token'      => 'clientToken',
-            'dns-token'         => 'dnsName',
+            'dns-name'         => 'dnsName',
             'group-id'          => 'groupId',
             'image-id'          => 'imageId',
             'instance-id'       => 'instanceId',
@@ -153,7 +156,7 @@ module Fog
           instance_set.each do |instance|
             case instance['instanceState']['name']
             when 'pending'
-              if Time.now - instance['launchTime'] > Fog::Mock.delay
+              if Time.now - instance['launchTime'] >= Fog::Mock.delay
                 instance['ipAddress']         = Fog::AWS::Mock.ip_address
                 instance['dnsName']           = Fog::AWS::Mock.dns_name_for(instance['ipAddress'])
                 instance['privateIpAddress']  = Fog::AWS::Mock.ip_address
@@ -163,20 +166,20 @@ module Fog
             when 'rebooting'
               instance['instanceState'] = { 'code' => 16, 'name' => 'running' }
             when 'shutting-down'
-              if Time.now - @data[:deleted_at][instance['instanceId']] > Fog::Mock.delay * 2
-                @data[:deleted_at].delete(instance['instanceId'])
-                @data[:instances].delete(instance['instanceId'])
-              elsif Time.now - @data[:deleted_at][instance['instanceId']] > Fog::Mock.delay
+              if Time.now - self.data[:deleted_at][instance['instanceId']] >= Fog::Mock.delay * 2
+                self.data[:deleted_at].delete(instance['instanceId'])
+                self.data[:instances].delete(instance['instanceId'])
+              elsif Time.now - self.data[:deleted_at][instance['instanceId']] >= Fog::Mock.delay
                 instance['instanceState'] = { 'code' => 48, 'name' => 'terminating' }
               end
             when 'terminating'
-              if Time.now - @data[:deleted_at][instance['instanceId']] > Fog::Mock.delay
-                @data[:deleted_at].delete(instance['instanceId'])
-                @data[:instances].delete(instance['instanceId'])
+              if Time.now - self.data[:deleted_at][instance['instanceId']] >= Fog::Mock.delay
+                self.data[:deleted_at].delete(instance['instanceId'])
+                self.data[:instances].delete(instance['instanceId'])
               end
             end
 
-            if @data[:instances][instance['instanceId']]
+            if self.data[:instances][instance['instanceId']]
 
               reservation_set[instance['reservationId']] ||= {
                 'groupSet'      => instance['groupSet'],

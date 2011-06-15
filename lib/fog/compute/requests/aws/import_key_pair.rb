@@ -17,6 +17,8 @@ module Fog
         #     * 'keyFingerprint'<~String> - SHA-1 digest of DER encoded private key
         #     * 'keyName'<~String> - Name of key
         #     * 'requestId'<~String> - Id of request
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-ImportKeyPair.html]
         def import_key_pair(key_name, public_key_material)
           request(
             'Action'  => 'ImportKeyPair',
@@ -32,13 +34,13 @@ module Fog
 
         def import_key_pair(key_name, public_key_material)
           response = Excon::Response.new
-          unless @data[:key_pairs][key_name]
+          unless self.data[:key_pairs][key_name]
             response.status = 200
             data = {
               'keyFingerprint'  => Fog::AWS::Mock.key_fingerprint,
               'keyName'         => key_name
             }
-            @data[:key_pairs][key_name] = data
+            self.data[:key_pairs][key_name] = data
             response.body = {
               'requestId' => Fog::AWS::Mock.request_id
             }.merge!(data)

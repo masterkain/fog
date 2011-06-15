@@ -13,17 +13,9 @@ module Fog
           response = request(
             :expects  => 204,
             :method   => 'DELETE',
-            :path     => "#{CGI.escape(container)}/#{CGI.escape(object)}"
+            :path     => "#{URI.escape(container)}/#{URI.escape(object)}"
           )
           response
-        end
-
-      end
-
-      class Mock
-
-        def delete_object(container, object)
-          Fog::Mock.not_implemented
         end
 
       end

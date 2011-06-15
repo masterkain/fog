@@ -31,27 +31,6 @@ module Fog
 
       module Utils
 
-        def parse_data(data)
-          metadata = {
-            :body => nil,
-            :headers => {}
-          }
-
-          if data.is_a?(String)
-            metadata[:body] = data
-            metadata[:headers]['Content-Length'] = metadata[:body].size
-          else
-            filename = ::File.basename(data.path)
-            unless (mime_types = MIME::Types.of(filename)).empty?
-              metadata[:headers]['Content-Type'] = mime_types.first.content_type
-            end
-            metadata[:body] = data
-            metadata[:headers]['Content-Length'] = ::File.size(data.path)
-          end
-          # metadata[:headers]['Content-MD5'] = Base64.encode64(Digest::MD5.digest(metadata[:body])).strip
-          metadata
-        end
-
         def url(params, expires)
           params[:headers]['Date'] = expires.to_i
           params[:path] = CGI.escape(params[:path]).gsub('%2F', '/')
@@ -140,10 +119,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -156,19 +133,25 @@ module Fog
 
           require 'mime/types'
           @google_storage_access_key_id = options[:google_storage_access_key_id]
-          @data = self.class.data[@google_storage_access_key_id]
+        end
+
+        def data
+          self.class.data[@google_storage_access_key_id]
+        end
+
+        def reset_data
+          self.class.data.delete(@google_storage_access_key_id)
         end
 
         def signature(params)
           "foo"
         end
+
       end
 
     
       class Real
         include Utils
-        extend Fog::Deprecation
-        deprecate(:reset, :reload)
 
         # Initialize connection to Google Storage
         #
@@ -195,29 +178,23 @@ module Fog
             Formatador.display_line(warning)
           end
 
+          require 'fog/core/parser'
           require 'mime/types'
+
           @google_storage_access_key_id = options[:google_storage_access_key_id]
           @google_storage_secret_access_key = options[:google_storage_secret_access_key]
           @hmac = Fog::HMAC.new('sha1', @google_storage_secret_access_key)
           @host = options[:host] || 'commondatastorage.googleapis.com'
           @port   = options[:port]      || 443
           @scheme = options[:scheme]    || 'https'
-          @connection = Fog::Connection.new("#{@scheme}://#{@host}:#{@port}", options[:persistent] || true)
+          unless options.has_key?(:persistent)
+            options[:persistent] = true
+          end
+          @connection = Fog::Connection.new("#{@scheme}://#{@host}:#{@port}", options[:persistent])
         end
 
         def reload
           @connection.reset
-        end
-
-        private
-
-        def request(params, &block)
-          params[:headers]['Date'] = Fog::Time.now.to_date_header
-          params[:headers]['Authorization'] = "GOOG1 #{@google_storage_access_key_id}:#{signature(params)}"
-
-          response = @connection.request(params, &block)
-
-          response
         end
 
         def signature(params)
@@ -270,6 +247,18 @@ DATA
 
           signed_string = @hmac.sign(string_to_sign)
           signature = Base64.encode64(signed_string).chomp!
+        end
+
+
+        private
+
+        def request(params, &block)
+          params[:headers]['Date'] = Fog::Time.now.to_date_header
+          params[:headers]['Authorization'] = "GOOG1 #{@google_storage_access_key_id}:#{signature(params)}"
+
+          response = @connection.request(params, &block)
+
+          response
         end
       end
     end

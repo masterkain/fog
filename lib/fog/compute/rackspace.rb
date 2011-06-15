@@ -1,25 +1,9 @@
 module Fog
   module Rackspace
-    class Servers
-
-      def self.new(attributes = {})
-        location = caller.first
-        warning = "[yellow][WARN] Fog::Rackspace::Servers#new is deprecated, use Fog::Rackspace::Compute#new instead[/]"
-        warning << " [light_black](" << location << ")[/] "
-        Formatador.display_line(warning)
-        Fog::Rackspace::Compute.new(attributes)
-      end
-
-    end
-  end
-end
-
-module Fog
-  module Rackspace
     class Compute < Fog::Service
 
       requires :rackspace_api_key, :rackspace_username
-      recognizes :rackspace_auth_url, :persistent
+      recognizes :rackspace_auth_url, :rackspace_servicenet, :persistent
       recognizes :provider # remove post deprecation
 
       model_path 'fog/compute/models/rackspace'
@@ -69,10 +53,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -84,7 +66,14 @@ module Fog
           end
 
           @rackspace_username = options[:rackspace_username]
-          @data = self.class.data[@rackspace_username]
+        end
+
+        def data
+          self.class.data[@rackspace_username]
+        end
+
+        def reset_data
+          self.class.data.delete(@rackspace_username)
         end
 
       end
@@ -103,7 +92,9 @@ module Fog
           @rackspace_api_key = options[:rackspace_api_key]
           @rackspace_username = options[:rackspace_username]
           @rackspace_auth_url = options[:rackspace_auth_url]
+          @rackspace_servicenet = options[:rackspace_servicenet]
           authenticate
+          Excon.ssl_verify_peer = false if options[:rackspace_servicenet] == true
           @connection = Fog::Connection.new("#{@scheme}://#{@host}:#{@port}", options[:persistent])
         end
 
@@ -119,7 +110,8 @@ module Fog
                 'X-Auth-Token' => @auth_token
               }.merge!(params[:headers] || {}),
               :host     => @host,
-              :path     => "#{@path}/#{params[:path]}"
+              :path     => "#{@path}/#{params[:path]}",
+              :query    => ('ignore_awful_caching' << Time.now.to_i.to_s)
             }))
           rescue Excon::Errors::Unauthorized => error
             if JSON.parse(response.body)['unauthorized']['message'] == 'Invalid authentication token.  Please renew.'
@@ -153,7 +145,7 @@ module Fog
           credentials = Fog::Rackspace.authenticate(options)
           @auth_token = credentials['X-Auth-Token']
           uri = URI.parse(credentials['X-Server-Management-Url'])
-          @host   = uri.host
+          @host   = @rackspace_servicenet == true ? "snet-#{uri.host}" : uri.host
           @path   = uri.path
           @port   = uri.port
           @scheme = uri.scheme

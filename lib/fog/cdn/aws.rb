@@ -28,10 +28,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -43,13 +41,22 @@ module Fog
           end
 
           require 'mime/types'
-          @aws_access_key_id = options[:aws_access_key_id]
-          @data = self.class.data[options[:region]][@aws_access_key_id]
+          @aws_access_key_id  = options[:aws_access_key_id]
+          @region             = options[:region]
+        end
+
+        def data
+          self.class.data[@region][@aws_access_key_id]
+        end
+
+        def reset_data
+          self.class.data[@region].delete(@aws_access_key_id)
         end
 
         def signature(params)
           "foo"
         end
+
       end
 
       class Real
@@ -79,6 +86,8 @@ module Fog
             Formatador.display_line(warning)
           end
 
+          require 'fog/core/parser'
+
           @aws_access_key_id = options[:aws_access_key_id]
           @aws_secret_access_key = options[:aws_secret_access_key]
           @hmac     = Fog::HMAC.new('sha1', @aws_secret_access_key)
@@ -87,7 +96,10 @@ module Fog
           @port     = options[:port]      || 443
           @scheme   = options[:scheme]    || 'https'
           @version  = options[:version]  || '2010-11-01'
-          @connection = Fog::Connection.new("#{@scheme}://#{@host}:#{@port}#{@path}", options[:persistent] || true)
+          unless options.has_key?(:persistent)
+            options[:persistent] = true
+          end
+          @connection = Fog::Connection.new("#{@scheme}://#{@host}:#{@port}#{@path}", options[:persistent])
         end
 
         def reload

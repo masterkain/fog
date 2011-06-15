@@ -10,17 +10,24 @@ module Fog
       request :create_access_key
       request :create_group
       request :create_user
+      request :create_login_profile
       request :delete_access_key
       request :delete_group
       request :delete_group_policy
+      request :delete_login_profile
+      request :delete_server_certificate
       request :delete_signing_certificate
       request :delete_user
       request :delete_user_policy
+      request :get_login_profile
       request :get_user
+      request :get_user_policy
+      request :get_group
       request :list_access_keys
       request :list_groups
       request :list_groups_for_user
       request :list_group_policies
+      request :list_server_certificates
       request :list_signing_certificates
       request :list_user_policies
       request :list_users
@@ -28,11 +35,17 @@ module Fog
       request :put_user_policy
       request :remove_user_from_group
       request :update_access_key
+      request :update_group
+      request :update_login_profile
+      request :update_user
+      request :update_signing_certificate
+      request :upload_server_certificate
       request :upload_signing_certificate
 
       class Mock
 
         def initialize(options={})
+          Fog::Mock.not_implemented
         end
 
       end
@@ -57,7 +70,9 @@ module Fog
         # ==== Returns
         # * IAM object with connection to AWS.
         def initialize(options={})
+          require 'fog/core/parser'
           require 'json'
+
           @aws_access_key_id      = options[:aws_access_key_id]
           @aws_secret_access_key  = options[:aws_secret_access_key]
           @hmac       = Fog::HMAC.new('sha256', @aws_secret_access_key)

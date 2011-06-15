@@ -49,21 +49,16 @@ module Fog
         end
 
         def public_url
-          requires :directory, :key
-          if @directory.public_url
-            "#{@directory.public_url}/#{key}"
-          end
+          requires :key
+          self.collection.get_url(self.key)
         end
 
         def save(options = {})
           requires :body, :directory, :key
+          options['Content-Type'] = content_type if content_type
           data = connection.put_object(directory.key, key, body, options)
           merge_attributes(data.headers)
-          if body.is_a?(String)
-            self.content_length = body.size
-          else
-            self.content_length = ::File.size(body.path)
-          end
+          self.content_length = Fog::Storage.get_body_size(body)
           true
         end
 

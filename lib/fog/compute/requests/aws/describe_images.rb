@@ -36,6 +36,8 @@ module Fog
         #       * 'rootDeviceName'<~String> - Root device name, e.g. /dev/sda1
         #       * 'rootDeviceType'<~String> - Root device type, ebs or instance-store
         #       * 'virtualizationType'<~String> - Type of virtualization
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeImages.html]
         def describe_images(filters = {})
           options = {}
           for key in ['ExecutableBy', 'ImageId', 'Owner']
@@ -91,7 +93,7 @@ module Fog
             'virtualization-type' => 'virtualizationType'
           }
           
-          image_set = @data[:images].values
+          image_set = self.data[:images].values
           
           for filter_key, filter_value in filters
             aliased_key = aliases[filter_key]

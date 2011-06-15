@@ -19,6 +19,8 @@ module Fog
         #       * 'resourceType'<~String> - type of resource tag belongs to
         #       * 'key'<~String> - Tag's key
         #       * 'value'<~String> - Tag's value
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeTags.html]
         def describe_tags(filters = {})
           params = AWS.indexed_filters(filters)
           request({
@@ -26,14 +28,6 @@ module Fog
             :idempotent => true,
             :parser     => Fog::Parsers::AWS::Compute::DescribeTags.new
           }.merge!(params))
-        end
-
-      end
-
-      class Mock
-
-        def describe_tags(filters = {})
-          Fog::Mock.not_implemented
         end
 
       end

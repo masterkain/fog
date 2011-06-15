@@ -12,17 +12,9 @@ module Fog
           response = request(
             :expects  => 204,
             :method   => 'DELETE',
-            :path     => CGI.escape(name)
+            :path     => URI.escape(name)
           )
           response
-        end
-
-      end
-
-      class Mock
-
-        def delete_container(name)
-          Fog::Mock.not_implemented
         end
 
       end

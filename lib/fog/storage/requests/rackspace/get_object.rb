@@ -14,17 +14,9 @@ module Fog
             :block    => block,
             :expects  => 200,
             :method   => 'GET',
-            :path     => "#{CGI.escape(container)}/#{CGI.escape(object)}"
+            :path     => "#{URI.escape(container)}/#{URI.escape(object)}"
           }, false, &block)
           response
-        end
-
-      end
-
-      class Mock
-
-        def get_object(container, object, &block)
-          Fog::Mock.not_implemented
         end
 
       end

@@ -15,6 +15,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> - Id of request
         #     * TODO: fill in the blanks
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-StartInstances.html]
         def start_instances(instance_id)
           params = AWS.indexed_param('InstanceId', instance_id)
           request({
@@ -22,14 +24,6 @@ module Fog
             :idempotent => true,
             :parser     => Fog::Parsers::AWS::Compute::StartStopInstances.new
           }.merge!(params))
-        end
-
-      end
-
-      class Mock
-
-        def start_instances(instance_id)
-          Fog::Mock.not_implemented
         end
 
       end

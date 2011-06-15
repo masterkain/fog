@@ -10,23 +10,29 @@ module Fog
 
         attribute :url
         attribute :name
-        attribute :status
+        attribute :state,       :aliases => 'status'
         attribute :hostname
-        attribute :created_at, :type => :time
-        attribute :deleted_at, :type => :time
-        attribute :started_at, :type => :time
+        attribute :created_at,  :type => :time
+        attribute :deleted_at,  :type => :time
+        attribute :started_at,  :type => :time
         attribute :user_data
 
         attribute :resource_type
 
-        attribute :account_id, :aliases => "account", :squash => "id"
-        attribute :image_id, :aliases => "image", :squash => "id"
-        attribute :flavor_id, :aliases => "server_type", :squash => "id"
-        attribute :zone_id, :aliases => "zone", :squash => "id"
+        attribute :account_id,  :aliases => "account",      :squash => "id"
+        attribute :image_id,    :aliases => "image",        :squash => "id"
+        attribute :flavor_id,   :aliases => "server_type",  :squash => "id"
+        attribute :zone_id,     :aliases => "zone",         :squash => "id"
 
         attribute :snapshots
         attribute :cloud_ips
         attribute :interfaces
+
+        def initialize(attributes={})
+          self.flavor_id  ||= 'typ-4nssg' # Nano
+          self.image_id   ||= 'img-2ab98' # Ubuntu Lucid 10.04 server (i686)
+          super
+        end
 
         def snapshot
           requires :identity
@@ -71,8 +77,22 @@ module Fog
           connection.images.get(image_id)
         end
 
+        def private_ip_address
+          interfaces.first
+        end
+
+        def public_ip_address
+          cloud_ips.first
+        end
+
         def ready?
-          status == 'active'
+          self.state == 'active'
+        end
+
+        def activate_console
+          requires :identity
+          response = connection.activate_console_server(identity)
+          [response["console_url"], response["console_token"], response["console_token_expires"]]
         end
 
         def save

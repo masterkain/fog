@@ -21,6 +21,8 @@ module Fog
         #     * 'requestId'<~String> - Id of request
         #     * 'status'<~String> - Status of volume
         #     * 'volumeId'<~String> - Reference to volume
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-AttachVolume.html]
         def attach_volume(instance_id, volume_id, device)
           request(
             'Action'      => 'AttachVolume',
@@ -40,9 +42,13 @@ module Fog
           response = Excon::Response.new
           if instance_id && volume_id && device
             response.status = 200
-            instance = @data[:instances][instance_id]
-            volume = @data[:volumes][volume_id]
+            instance = self.data[:instances][instance_id]
+            volume = self.data[:volumes][volume_id]
             if instance && volume
+              unless volume['status'] == 'available'
+                raise Fog::AWS::Compute::Error.new("Client.VolumeInUse => Volume #{volume_id} is unavailable")
+              end
+
               data = {
                 'attachTime'  => Time.now,
                 'device'      => device,

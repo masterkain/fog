@@ -32,8 +32,7 @@ NilClass.send :include, Fog::Brightbox::Nullable::Zone
 class Brightbox
   module Compute
     module TestSupport
-      # image img-9vxqi = Ubuntu Maverick 10.10 server
-      IMAGE_IDENTIFER = "img-9vxqi"
+      IMAGE_IDENTIFER = "img-2ab98" # Ubuntu Lucid 10.04 server (i686)
     end
     module Formats
       module Struct
@@ -117,12 +116,10 @@ class Brightbox
 
         SERVER_TYPE = {
           "name"            => String,
+          "handle"          => Fog::Nullable::String,
           "cores"           => Integer,
-          "created_at"      => String,
           "resource_type"   => String,
-          "updated_at"      => String,
           "disk_size"       => Integer,
-          "default"         => Fog::Boolean,
           "url"             => String,
           "id"              => String,
           "ram"             => Integer,
@@ -165,7 +162,7 @@ class Brightbox
           "account"         => Brightbox::Compute::Formats::Nested::ACCOUNT,
           "interface"       => Fog::Brightbox::Nullable::Interface,
           "load_balancer"   => Fog::Brightbox::Nullable::LoadBalancer,
-          "server"          => Fog::Nullable::String
+          "server"          => Fog::Brightbox::Nullable::Server
         }
 
         IMAGE = {
@@ -203,7 +200,6 @@ class Brightbox
           "id"              => String,
           "resource_type"   => String,
           "url"             => String,
-          "listed"          => Fog::Boolean,
           "name"            => String,
           "status"          => String,
           "hostname"        => String,
@@ -274,6 +270,9 @@ class Brightbox
           "library_ftp_host" => String,
           "library_ftp_user" => String,
           "library_ftp_password" => Fog::Nullable::String,
+          "verified_telephone" => Fog::Nullable::String,
+          "verified_at"     => Fog::Nullable::String,
+          "verified_ip"     => Fog::Nullable::String,
           "owner"           => Brightbox::Compute::Formats::Nested::USER,
           "users"           => [Brightbox::Compute::Formats::Nested::USER],
           "clients"         => [Brightbox::Compute::Formats::Nested::API_CLIENT],
@@ -346,7 +345,8 @@ class Brightbox
           "created_at"      => String,
           "deleted_at"      => Fog::Nullable::String,
           "account"         => Brightbox::Compute::Formats::Nested::ACCOUNT,
-          "nodes"           => [Brightbox::Compute::Formats::Nested::SERVER]
+          "nodes"           => [Brightbox::Compute::Formats::Nested::SERVER],
+          "cloud_ips"       => [Brightbox::Compute::Formats::Nested::CLOUD_IP]
         }
 
         SERVER = {
@@ -360,6 +360,9 @@ class Brightbox
           "started_at"      => Fog::Nullable::String,
           "deleted_at"      => Fog::Nullable::String,
           "user_data"       => Fog::Nullable::String,
+          "console_url"     => Fog::Nullable::String,
+          "console_token"   => Fog::Nullable::String,
+          "console_token_expires" => Fog::Nullable::String,
           "account"         => Brightbox::Compute::Formats::Nested::ACCOUNT,
           "server_type"     => Brightbox::Compute::Formats::Nested::SERVER_TYPE,
           "cloud_ips"       => [Brightbox::Compute::Formats::Nested::CLOUD_IP],
@@ -397,7 +400,7 @@ class Brightbox
           "id"              => String,
           "resource_type"   => String,
           "url"             => String,
-          "handle"          => Fog::Nullable::String
+          "handle"          => String
         }
 
       end

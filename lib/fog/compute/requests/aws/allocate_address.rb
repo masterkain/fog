@@ -12,6 +12,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'publicIp'<~String> - The acquired address
         #     * 'requestId'<~String> - Id of the request
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-AllocateAddress.html]
         def allocate_address
           request(
             'Action'  => 'AllocateAddress',
@@ -25,14 +27,14 @@ module Fog
 
         def allocate_address
           response = Excon::Response.new
-          if describe_addresses.body['addressesSet'].size < @data[:limits][:addresses]
+          if describe_addresses.body['addressesSet'].size < self.data[:limits][:addresses]
             response.status = 200
             public_ip = Fog::AWS::Mock.ip_address
             data ={
               'instanceId' => nil,
               'publicIp'   => public_ip
             }
-            @data[:addresses][public_ip] = data
+            self.data[:addresses][public_ip] = data
             response.body = {
               'publicIp'  => public_ip,
               'requestId' => Fog::AWS::Mock.request_id

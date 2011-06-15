@@ -2,6 +2,8 @@ module Fog
   module AWS
     class Compute
       class Real
+        
+        require 'fog/compute/parsers/aws/basic'
 
         # Modify snapshot attributes
         #
@@ -9,6 +11,10 @@ module Fog
         # * snapshot_id<~String> - Id of snapshot to modify
         # * attribute<~String> - Attribute to modify, in ['createVolumePermission']
         # * operation_type<~String> - Operation to perform on attribute, in ['add', 'remove']
+        #
+        #
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-ModifySnapshotAttribute.html]
         #
         def modify_snapshot_attribute(snapshot_id, attribute, operation_type, options = {})
           params = {}
@@ -22,14 +28,6 @@ module Fog
             :idempotent     => true,
             :parser         => Fog::Parsers::AWS::Compute::Basic.new
           }.merge!(params))
-        end
-
-      end
-
-      class Mock
-
-        def modify_snapshot_attribute(snapshot_id, attribute, operation_type, options = {})
-          Fog::Mock.not_implemented
         end
 
       end

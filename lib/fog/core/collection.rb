@@ -5,7 +5,7 @@ module Fog
     include Fog::Attributes::InstanceMethods
 
     Array.public_instance_methods(false).each do |method|
-      unless [:reject, :select].include?(method.to_sym)
+      unless [:reject, :select, :slice].include?(method.to_sym)
         class_eval <<-RUBY
           def #{method}(*args)
             unless @loaded
@@ -17,7 +17,7 @@ module Fog
       end
     end
 
-    %w[reject select].each do |method|
+    %w[reject select slice].each do |method|
       class_eval <<-RUBY
         def #{method}(*args)
           unless @loaded
@@ -94,6 +94,9 @@ module Fog
     end
 
     def new(attributes = {})
+      unless attributes.is_a?(Hash)
+        raise(ArgumentError.new("Initialization parameters must be an attributes hash, got #{attributes.inspect}"))
+      end
       model.new(
         attributes.merge(
           :collection => self,
@@ -113,6 +116,7 @@ module Fog
     end
 
     def to_json
+      require 'json'
       self.map {|member| member.attributes}.to_json
     end
 

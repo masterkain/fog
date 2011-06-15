@@ -7,11 +7,6 @@ module Fog
       class BlockInstantiationError < StandardError; end
 
       class Server < Fog::Model
-        extend Fog::Deprecation
-        deprecate(:ssh_key, :public_key)
-        deprecate(:ssh_key=, :public_key=)
-        deprecate(:user, :username)
-        deprecate(:user=, :username=)
 
         identity :id
 
@@ -22,15 +17,16 @@ module Fog
         attribute :image_id
         attribute :ips
         attribute :memory
-        attribute :status
+        attribute :state,       :aliases => :status
         attribute :storage
         attribute :template
 
-        attr_accessor :password
+        attr_accessor :password, :lb_applications, :lb_services, :lb_backends
         attr_writer :private_key, :private_key_path, :public_key, :public_key_path, :username
 
         def initialize(attributes={})
-          self.flavor_id ||= '94fd37a7-2606-47f7-84d5-9000deda52ae'
+          self.flavor_id  ||= '94fd37a7-2606-47f7-84d5-9000deda52ae' # Block 1GB Virtual Server
+          self.image_id   ||= '03807e08-a13d-44e4-b011-ebec7ef2c928' # Ubuntu LTS 10.04 64bit
           super
         end
 
@@ -50,6 +46,10 @@ module Fog
           connection.images.get(image_id)
         end
 
+        def private_ip_address
+          nil
+        end
+
         def private_key_path
           @private_key_path ||= Fog.credentials[:private_key_path]
           @private_key_path &&= File.expand_path(@private_key_path)
@@ -57,6 +57,10 @@ module Fog
 
         def private_key
           @private_key ||= private_key_path && File.read(private_key_path)
+        end
+
+        def public_ip_address
+          ips.first
         end
 
         def public_key_path
@@ -69,7 +73,7 @@ module Fog
         end
 
         def ready?
-          status == 'running'
+          self.state == 'running'
         end
 
         def reboot(type = 'SOFT')
@@ -81,13 +85,22 @@ module Fog
         def save
           raise Fog::Errors::Error.new('Resaving an existing object may create a duplicate') if identity
           requires :flavor_id, :image_id
-          options = if !password && !public_key
-            raise(ArgumentError, "password or public_key is required for this operation")
-          elsif public_key
-            {'ssh_public_key' => public_key}
-          elsif @password
-            {'password' => password}
+          options = {}
+
+          if identity.nil?  # new record
+            raise(ArgumentError, "password or public_key is required for this operation") if !password && !public_key
+            options['ssh_public_key'] = public_key if public_key
+            options['password'] = password if @password
           end
+
+          if @lb_backends
+            options['lb_backends'] = lb_backends
+          elsif @lb_services
+            options['lb_services'] = lb_services
+          elsif @lb_applications
+            options['lb_applications'] = lb_applications
+          end
+
           options['username'] = username
           data = connection.create_block(flavor_id, image_id, options)
           merge_attributes(data.body)
@@ -113,6 +126,14 @@ module Fog
           options = {}
           options[:key_data] = [private_key] if private_key
           Fog::SSH.new(ips.first['address'], username, options).run(commands)
+        end
+
+        def scp(local_path, remote_path, upload_options = {})
+          requires :ips, :username
+
+          scp_options = {}
+          scp_options[:key_data] = [private_key] if private_key
+          Fog::SCP.new(ips.first['address'], username, scp_options).upload(local_path, remote_path, upload_options)
         end
 
         def username

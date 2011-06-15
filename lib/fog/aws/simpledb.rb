@@ -3,8 +3,8 @@ module Fog
     class SimpleDB < Fog::Service
 
       requires :aws_access_key_id, :aws_secret_access_key
-      recognizes :host, :nil_string, :path, :port, :scheme, :persistent
-      
+      recognizes :host, :nil_string, :path, :port, :scheme, :persistent, :region
+
       request_path 'fog/aws/requests/simpledb'
       request :batch_put_attributes
       request :create_domain
@@ -26,15 +26,20 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
           @aws_access_key_id = options[:aws_access_key_id]
-          @data = self.class.data[@aws_access_key_id]
+        end
+
+        def data
+          self.class.data[@aws_access_key_id]
+        end
+
+        def reset_data
+          self.class.data.delete(@aws_access_key_id)
         end
 
       end
@@ -44,7 +49,7 @@ module Fog
         # Initialize connection to SimpleDB
         #
         # ==== Notes
-        # options parameter must include values for :aws_access_key_id and 
+        # options parameter must include values for :aws_access_key_id and
         # :aws_secret_access_key in order to create a connection
         #
         # ==== Examples
@@ -59,11 +64,28 @@ module Fog
         # ==== Returns
         # * SimpleDB object with connection to aws.
         def initialize(options={})
+          require 'fog/core/parser'
+
           @aws_access_key_id      = options[:aws_access_key_id]
           @aws_secret_access_key  = options[:aws_secret_access_key]
           @hmac       = Fog::HMAC.new('sha256', @aws_secret_access_key)
-          @host       = options[:host]      || 'sdb.amazonaws.com'
           @nil_string = options[:nil_string]|| 'nil'
+
+          options[:region] ||= 'us-east-1'
+          @host = options[:host] || case options[:region]
+          when 'ap-northeast-1'
+            'sdb.ap-northeast-1.amazonaws.com'
+          when 'ap-southeast-1'
+            'sdb.ap-southeast-1.amazonaws.com'
+          when 'eu-west-1'
+            'sdb.eu-west-1.amazonaws.com'
+          when 'us-east-1'
+            'sdb.amazonaws.com'
+          when 'us-west-1'
+            'sdb.us-west-1.amazonaws.com'
+          else
+            raise ArgumentError, "Unknown region: #{options[:region].inspect}"
+          end
           @path       = options[:path]      || '/'
           @port       = options[:port]      || 443
           @scheme     = options[:scheme]    || 'https'
@@ -108,8 +130,8 @@ module Fog
             item_index = 0
             for item_key in items.keys
               encoded_attributes["Item.#{item_index}.ItemName"] = item_key.to_s
+              attribute_index = 0
               for attribute_key in items[item_key].keys
-                attribute_index = 0
                 for value in Array(items[item_key][attribute_key])
                   encoded_attributes["Item.#{item_index}.Attribute.#{attribute_index}.Name"] = attribute_key.to_s
                   if replace_attributes[item_key].include?(attribute_key)
@@ -118,8 +140,8 @@ module Fog
                   encoded_attributes["Item.#{item_index}.Attribute.#{attribute_index}.Value"] = sdb_encode(value)
                   attribute_index += 1
                 end
-                item_index += 1
               end
+              item_index += 1
             end
           end
           encoded_attributes
@@ -148,7 +170,7 @@ module Fog
           response = @connection.request({
             :body       => body,
             :expects    => 200,
-            :headers    => { 'Content-Type' => 'application/x-www-form-urlencoded' },
+            :headers    => { 'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8' },
             :host       => @host,
             :idempotent => idempotent,
             :method     => 'POST',

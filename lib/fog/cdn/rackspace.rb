@@ -11,6 +11,7 @@ module Fog
       request_path 'fog/cdn/requests/rackspace'
       request :get_containers
       request :head_container
+      request :post_container
       request :put_container
 
       class Mock
@@ -21,10 +22,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -36,7 +35,14 @@ module Fog
           end
 
           @rackspace_username = options[:rackspace_username]
-          @data = self.class.data[@rackspace_username]
+        end
+
+        def data
+          self.class.data[@rackspace_username]
+        end
+
+        def reset_data
+          self.class.data.delete(@rackspace_username)
         end
 
       end

@@ -10,6 +10,10 @@ module Fog
         service.collections
       end
 
+      def mocked_requests
+        service.mocked_requests
+      end
+
       def requests
         service.requests
       end
@@ -20,6 +24,9 @@ module Fog
 
       def inherited(child)
         child.class_eval <<-EOS, __FILE__, __LINE__
+          class Error < Fog::Service::Error; end
+          class NotFound < Fog::Service::NotFound; end
+
           module Collections
             include Fog::Service::Collections
 
@@ -76,6 +83,15 @@ module Fog
           end
           for request in requests
             require [@request_path, request].join('/')
+            if service::Mock.method_defined?(request)
+              mocked_requests << request
+            else
+              service::Mock.module_eval <<-EOS, __FILE__, __LINE__
+                def #{request}(*args)
+                  Fog::Mock.not_implemented
+                end
+              EOS
+            end
           end
           @required = true
         end
@@ -91,6 +107,10 @@ module Fog
 
       def collections
         @collections ||= []
+      end
+
+      def mocked_requests
+        @mocked_requests ||= []
       end
 
       def model(new_model)
@@ -127,14 +147,6 @@ module Fog
 
       def recognized
         @recognized ||= []
-      end
-
-      def reset_data(keys=Mock.data.keys)
-        Mock.reset_data(keys)
-      end
-
-      def reset_data(keys=Mock.data.keys)
-        Mock.reset_data(keys)
       end
 
       def validate_options(options)

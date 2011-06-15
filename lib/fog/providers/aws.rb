@@ -1,23 +1,22 @@
-require 'nokogiri'
-
 require 'fog/core'
 require 'fog/core/parser'
+require 'openssl' # For RSA key pairs
 
 module Fog
   module AWS
 
     extend Fog::Provider
 
-    service(:cdn,       'cdn/aws')
-    service(:compute,   'compute/aws')
-    service(:dns,       'dns/aws')
-    service(:ec2,       'compute/aws')
-    service(:elb,       'aws/elb')
-    service(:iam,       'aws/iam')
-    service(:s3,        'storage/aws')
-    service(:ses,       'aws/ses')
-    service(:simpledb,  'aws/simpledb')
-    service(:storage,   'storage/aws')
+    service(:cdn,             'cdn/aws')
+    service(:compute,         'compute/aws')
+    service(:cloud_formation, 'aws/cloud_formation')
+    service(:dns,             'dns/aws')
+    service(:elb,             'aws/elb')
+    service(:iam,             'aws/iam')
+    service(:rds,             'aws/rds')
+    service(:ses,             'aws/ses')
+    service(:simpledb,        'aws/simpledb')
+    service(:storage,         'storage/aws')
 
     def self.indexed_param(key, values)
       params = {}
@@ -43,6 +42,10 @@ module Fog
       params
     end
 
+    def self.escape(string)
+      string.gsub( /([^-a-zA-Z0-9_.~]+)/n ) { |match| '%' + match.unpack( 'H2' * match.size ).join( '%' ).upcase }
+    end
+
     def self.signed_params(params, options = {})
       params.merge!({
         'AWSAccessKeyId'    => options[:aws_access_key_id],
@@ -55,20 +58,20 @@ module Fog
       body = ''
       for key in params.keys.sort
         unless (value = params[key]).nil?
-          body << "#{key}=#{CGI.escape(value.to_s).gsub(/\+/, '%20')}&"
+          body << "#{key}=#{escape(value.to_s)}&"
         end
       end
       string_to_sign = "POST\n#{options[:host]}:#{options[:port]}\n#{options[:path]}\n" << body.chop
       signed_string = options[:hmac].sign(string_to_sign)
-      body << "Signature=#{CGI.escape(Base64.encode64(signed_string).chomp!).gsub(/\+/, '%20')}"
+      body << "Signature=#{escape(Base64.encode64(signed_string).chomp!)}"
 
       body
     end
 
     class Mock
 
-      def self.availability_zone
-        "us-east-1" << Fog::Mock.random_selection('abcd', 1)
+      def self.availability_zone(region)
+        "#{region}#{Fog::Mock.random_selection('abcd', 1)}"
       end
 
       def self.box_usage
@@ -138,13 +141,7 @@ module Fog
       end
 
       def self.key_material
-        key_material = ['-----BEGIN RSA PRIVATE KEY-----']
-        20.times do
-          key_material << Fog::Mock.random_base64(76)
-        end
-        key_material << Fog::Mock.random_base64(67) + '='
-        key_material << '-----END RSA PRIVATE KEY-----'
-        key_material.join("\n")
+        OpenSSL::PKey::RSA.generate(1024).to_s
       end
 
       def self.owner_id

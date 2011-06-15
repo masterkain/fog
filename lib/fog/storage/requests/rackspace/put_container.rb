@@ -12,17 +12,9 @@ module Fog
           response = request(
             :expects  => [201, 202],
             :method   => 'PUT',
-            :path     => CGI.escape(name)
+            :path     => URI.escape(name)
           )
           response
-        end
-
-      end
-
-      class Mock
-
-        def put_container(name)
-          Fog::Mock.not_implemented
         end
 
       end

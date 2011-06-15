@@ -34,10 +34,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -49,7 +47,14 @@ module Fog
           end
 
           @slicehost_password = options[:slicehost_password]
-          @data = self.class.data[@slicehost_password]
+        end
+
+        def data
+          self.class.data[@slicehost_password]
+        end
+
+        def reset_data
+          self.class.data.delete(@slicehost_password)
         end
 
       end
@@ -63,6 +68,8 @@ module Fog
             warning << " [light_black](" << location << ")[/] "
             Formatador.display_line(warning)
           end
+
+          require 'fog/core/parser'
 
           @slicehost_password = options[:slicehost_password]
           @host   = options[:host]    || "api.slicehost.com"

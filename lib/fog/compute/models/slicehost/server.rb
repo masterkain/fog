@@ -16,14 +16,15 @@ module Fog
         attribute :image_id,      :aliases => 'image-id'
         attribute :name
         attribute :progress
-        attribute :status
+        attribute :state,         :aliases => 'status'
 
         attr_accessor :password
         alias_method :'root-password=', :password=
         attr_writer :private_key, :private_key_path, :public_key, :public_key_path, :username
 
         def initialize(attributes={})
-          self.flavor_id ||= 1
+          self.flavor_id  ||= 1  # 256 server
+          self.image_id   ||= 49 # Ubuntu 10.04 LTS 64bit
           super
         end
 
@@ -43,6 +44,10 @@ module Fog
           connection.images.get(image_id)
         end
 
+        def private_ip_address
+          nil
+        end
+
         def private_key_path
           @private_key_path ||= Fog.credentials[:private_key_path]
           @private_key_path &&= File.expand_path(@private_key_path)
@@ -50,6 +55,10 @@ module Fog
 
         def private_key
           @private_key ||= private_key_path && File.read(private_key_path)
+        end
+
+        def public_ip_address
+          addresses.first
         end
 
         def public_key_path
@@ -62,7 +71,7 @@ module Fog
         end
 
         def ready?
-          status == 'active'
+          self.state == 'active'
         end
 
         def reboot(type = 'SOFT')
@@ -99,6 +108,14 @@ module Fog
           options = {}
           options[:key_data] = [private_key] if private_key
           Fog::SSH.new(addresses.first, username, options).run(commands)
+        end
+
+        def scp(local_path, remote_path, upload_options = {})
+          requires :addresses, :username
+
+          scp_options = {}
+          scp_options[:key_data] = [private_key] if private_key
+          Fog::SCP.new(addresses.first, username, scp_options).upload(local_path, remote_path, upload_options)
         end
 
         def username

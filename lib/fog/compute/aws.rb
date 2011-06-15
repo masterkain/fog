@@ -1,21 +1,5 @@
 module Fog
   module AWS
-    class EC2
-
-      def self.new(attributes = {})
-        location = caller.first
-        warning = "[yellow][WARN] Fog::AWS::EC2#new is deprecated, use Fog::AWS::Compute#new instead[/]"
-        warning << " [light_black](" << location << ")[/] "
-        Formatador.display_line(warning)
-        Fog::AWS::Compute.new(attributes)
-      end
-
-    end
-  end
-end
-
-module Fog
-  module AWS
     class Compute < Fog::Service
 
       requires :aws_access_key_id, :aws_secret_access_key
@@ -41,8 +25,6 @@ module Fog
       collection  :tags
       model       :volume
       collection  :volumes
-
-      require 'fog/compute/parsers/aws/basic'
 
       request_path 'fog/compute/requests/aws'
       request :allocate_address
@@ -76,6 +58,7 @@ module Fog
       request :detach_volume
       request :disassociate_address
       request :get_console_output
+      request :get_password_data
       request :import_key_pair
       request :modify_image_attributes
       request :modify_snapshot_attribute
@@ -87,6 +70,8 @@ module Fog
       request :terminate_instances
       request :start_instances
       request :stop_instances
+      request :monitor_instances
+      request :unmonitor_instances
 
       class Mock
 
@@ -140,10 +125,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -154,12 +137,49 @@ module Fog
             Formatador.display_line(warning)
           end
 
+          require 'fog/compute/parsers/aws/basic'
+
           @aws_access_key_id = options[:aws_access_key_id]
+
           @region = options[:region] || 'us-east-1'
-          @data = self.class.data[@region][@aws_access_key_id]
-          @owner_id = @data[:owner_id]
+
+          unless ['ap-northeast-1', 'ap-southeast-1', 'eu-west-1', 'us-east-1', 'us-west-1'].include?(@region)
+            raise ArgumentError, "Unknown region: #{@region.inspect}"
+          end
         end
 
+        def data
+          self.class.data[@region][@aws_access_key_id]
+        end
+
+        def reset_data
+          self.class.data[@region].delete(@aws_access_key_id)
+        end
+
+        def apply_tag_filters(resources, filters)
+          # tag-key: match resources tagged with this key (any value)
+          if filters.has_key?('tag-key')
+            value = filters.delete('tag-key')
+            resources = resources.select{|r| r['tagSet'].has_key?(value)}
+          end
+          
+          # tag-value: match resources tagged with this value (any key)
+          if filters.has_key?('tag-value')
+            value = filters.delete('tag-value')
+            resources = resources.select{|r| r['tagSet'].values.include?(value)}
+          end
+          
+          # tag:key: match resources taged with a key-value pair.  Value may be an array, which is OR'd.
+          tag_filters = {}
+          filters.keys.each do |key| 
+            tag_filters[key.gsub('tag:', '')] = filters.delete(key) if /^tag:/ =~ key
+          end
+          for tag_key, tag_value in tag_filters
+            resources = resources.select{|r| tag_value.include?(r['tagSet'][tag_key])}
+          end
+          
+          resources
+        end
       end
 
       class Real
@@ -178,7 +198,8 @@ module Fog
         #
         # ==== Parameters
         # * options<~Hash> - config arguments for connection.  Defaults to {}.
-        #   * region<~String> - optional region to use, in ['eu-west-1', 'us-east-1', 'us-west-1']
+        #   * region<~String> - optional region to use, in
+        #     ['eu-west-1', 'us-east-1', 'us-west-1', 'ap-northeast-1', 'ap-southeast-1']
         #
         # ==== Returns
         # * EC2 object with connection to aws.
@@ -190,9 +211,13 @@ module Fog
             Formatador.display_line(warning)
           end
 
+          require 'fog/core/parser'
+
           @aws_access_key_id      = options[:aws_access_key_id]
           @aws_secret_access_key  = options[:aws_secret_access_key]
           @hmac = Fog::HMAC.new('sha256', @aws_secret_access_key)
+          @region = options[:region] ||= 'us-east-1'
+
           if @endpoint = options[:endpoint]
             endpoint = URI.parse(@endpoint)
             @host = endpoint.host
@@ -200,8 +225,9 @@ module Fog
             @port = endpoint.port
             @scheme = endpoint.scheme
           else
-            options[:region] ||= 'us-east-1'
             @host = options[:host] || case options[:region]
+            when 'ap-northeast-1'
+              'ec2.ap-northeast-1.amazonaws.com'
             when 'ap-southeast-1'
               'ec2.ap-southeast-1.amazonaws.com'
             when 'eu-west-1'

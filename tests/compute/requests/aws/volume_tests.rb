@@ -5,7 +5,7 @@ Shindo.tests('AWS::Compute | volume requests', ['aws']) do
     'createTime'        => Time,
     'requestId'         => String,
     'size'              => Integer,
-    'snapshotId'        => NilClass,
+    'snapshotId'        => Fog::Nullable::String,
     'status'            => String,
     'volumeId'          => String
   }
@@ -22,18 +22,18 @@ Shindo.tests('AWS::Compute | volume requests', ['aws']) do
   @volumes_format = {
     'volumeSet' => [{
       'availabilityZone'  => String,
-      'attachmentSet'     => [],
+      'attachmentSet'     => Array,
       'createTime'        => Time,
       'size'              => Integer,
-      'snapshotId'        => NilClass,
+      'snapshotId'        => Fog::Nullable::String,
       'status'            => String,
-      'tagSet'            => {},
+      'tagSet'            => Hash,
       'volumeId'          => String
     }],
     'requestId' => String
   }
 
-  @server = AWS[:compute].servers.create(:image_id => GENTOO_AMI)
+  @server = AWS[:compute].servers.create
   @server.wait_for { ready? }
 
   tests('success') do

@@ -21,15 +21,6 @@ module Fog
             :query    => { :api_action => 'linode.delete', :linodeId => linode_id }.merge!(options)
           )
         end
-
-      end
-
-      class Mock
-
-        def linode_delete(linode_id, options={})
-          Fog::Mock.not_implemented
-        end
-
       end
     end
   end

@@ -33,18 +33,10 @@ module Fog
           response = request(
             :expects  => 200,
             :method   => 'GET',
-            :path     => container,
+            :path     => URI.escape(container),
             :query    => {'format' => 'json'}.merge!(options)
           )
           response
-        end
-
-      end
-
-      class Mock
-
-        def get_container(container, options = {})
-          Fog::Mock.not_implemented
         end
 
       end

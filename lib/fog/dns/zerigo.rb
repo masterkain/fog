@@ -36,10 +36,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -52,8 +50,14 @@ module Fog
 
           @zerigo_email = options[:zerigo_email]
           @zerigo_token = options[:zerigo_token]
-          @data = self.class.data[@zerigo_email]
-          @data = self.class.data[@zerigo_password]
+        end
+
+        def data
+          self.class.data[@zerigo_email]
+        end
+
+        def reset_data
+          self.class.data.delete(@zerigo_email)
         end
 
       end
@@ -67,6 +71,8 @@ module Fog
             warning << " [light_black](" << location << ")[/] "
             Formatador.display_line(warning)
           end
+
+          require 'fog/core/parser'
 
           @zerigo_email  = options[:zerigo_email]
           @zerigo_token  = options[:zerigo_token]

@@ -23,15 +23,6 @@ module Fog
             :query    => { :api_action => 'linode.list' }.merge!(options)
           )
         end
-
-      end
-
-      class Mock
-
-        def linode_list(options={})
-          Fog::Mock.not_implemented
-        end
-
       end
     end
   end

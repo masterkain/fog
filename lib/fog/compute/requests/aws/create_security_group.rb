@@ -3,6 +3,8 @@ module Fog
     class Compute
       class Real
 
+        require 'fog/compute/parsers/aws/basic'
+
         # Create a new security group
         #
         # ==== Parameters
@@ -14,11 +16,13 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> - Id of request
         #     * 'return'<~Boolean> - success?
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CreateSecurityGroup.html]
         def create_security_group(name, description)
           request(
             'Action'            => 'CreateSecurityGroup',
             'GroupName'         => name,
-            'GroupDescription'  => CGI.escape(description),
+            'GroupDescription'  => description,
             :parser             => Fog::Parsers::AWS::Compute::Basic.new
           )
         end
@@ -29,14 +33,14 @@ module Fog
 
         def create_security_group(name, description)
           response = Excon::Response.new
-          unless @data[:security_groups][name]
+          unless self.data[:security_groups][name]
             data = {
-              'groupDescription'  => CGI.escape(description).gsub('%20', '+'),
-              'groupName'         => CGI.escape(name).gsub('%20', '+'),
+              'groupDescription'  => description,
+              'groupName'         => name,
               'ipPermissions'     => [],
-              'ownerId'           => @owner_id
+              'ownerId'           => self.data[:owner_id]
             }
-            @data[:security_groups][name] = data
+            self.data[:security_groups][name] = data
             response.body = {
               'requestId' => Fog::AWS::Mock.request_id,
               'return'    => true

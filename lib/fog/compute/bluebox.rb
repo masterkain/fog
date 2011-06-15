@@ -33,10 +33,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -48,7 +46,14 @@ module Fog
           end
 
           @bluebox_api_key = options[:bluebox_api_key]
-          @data = self.class.data[@bluebox_api_key]
+        end
+
+        def data
+          self.class.data[@bluebox_api_key]
+        end
+
+        def reset_data
+          self.class.data.delete(@bluebox_api_key)
         end
 
       end

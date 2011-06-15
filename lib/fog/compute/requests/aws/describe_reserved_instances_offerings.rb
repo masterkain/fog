@@ -22,6 +22,8 @@ module Fog
         #       * 'productDescription'<~String> - description of offering
         #       * 'reservedInstancesOfferingId'<~String> - id of offering
         #       * 'usagePrice'<~Float> - usage price of offering, per hour
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeReservedInstancesOfferings.html]
         def describe_reserved_instances_offerings(filters = {})
           params = AWS.indexed_filters(filters)
           request({
@@ -29,14 +31,6 @@ module Fog
             :idempotent => true,
             :parser     => Fog::Parsers::AWS::Compute::DescribeReservedInstancesOfferings.new
           }.merge!(params))
-        end
-
-      end
-
-      class Mock
-
-        def describe_reserved_instances_offerings(filters = {})
-          Fog::Mock.not_implemented
         end
 
       end

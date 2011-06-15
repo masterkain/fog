@@ -6,9 +6,6 @@ module Fog
     class Storage
 
       class Directory < Fog::Model
-        extend Fog::Deprecation
-        deprecate(:name, :key)
-        deprecate(:name=, :key=)
 
         identity  :key, :aliases => 'name'
 
@@ -18,6 +15,7 @@ module Fog
         def destroy
           requires :key
           connection.delete_container(key)
+          connection.cdn.post_container(key, 'X-CDN-Enabled' => 'False')
           true
         rescue Excon::Errors::NotFound
           false
@@ -40,7 +38,13 @@ module Fog
           requires :key
           @public_url ||= begin
             begin response = connection.cdn.head_container(key)
-              response.headers['X-CDN-Enabled'] == 'True' && response.headers['X-CDN-URI']
+              if response.headers['X-CDN-Enabled'] == 'True'
+                if connection.rackspace_cdn_ssl == true
+                  response.headers['X-CDN-SSL-URI']
+                else
+                  response.headers['X-CDN-URI']
+                end
+              end
             rescue Fog::Service::NotFound
               nil
             end
@@ -58,7 +62,7 @@ module Fog
           end
           true
         end
-
+        
       end
 
     end

@@ -24,7 +24,7 @@ module Fog
         #   * headers<~Hash>:
         #     * 'ETag'<~String> - etag of new object
         def put_object(bucket_name, object_name, data, options = {})
-          data = parse_data(data)
+          data = Fog::Storage.parse_data(data)
           headers = data[:headers].merge!(options)
           request({
             :body       => data[:body],
@@ -46,16 +46,16 @@ module Fog
           if !['private', 'public-read', 'public-read-write', 'authenticated-read'].include?(acl)
             raise Excon::Errors::BadRequest.new('invalid x-goog-acl')
           else
-            @data[:acls][:object][bucket_name] ||= {}
-            @data[:acls][:object][bucket_name][object_name] = self.class.acls(acl)
+            self.data[:acls][:object][bucket_name] ||= {}
+            self.data[:acls][:object][bucket_name][object_name] = self.class.acls(acl)
           end
 
-          data = parse_data(data)
+          data = Fog::Storage.parse_data(data)
           unless data[:body].is_a?(String)
             data[:body] = data[:body].read
           end
           response = Excon::Response.new
-          if (bucket = @data[:buckets][bucket_name])
+          if (bucket = self.data[:buckets][bucket_name])
             response.status = 200
             object = {
               :body             => data[:body],

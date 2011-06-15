@@ -63,6 +63,19 @@ module Fog
       selection
     end
 
+    def self.reset
+      providers = Fog.providers.map {|p| Fog.const_get(p) }
+      possible_service_constants = providers.map {|p| p.constants.map {|c| p.const_get(c) } }.flatten
+      # c.to_sym is 1.8.7 / 1.9.2 compat
+      services = possible_service_constants.select {|s| s.constants.map {|c| c.to_sym }.include?(:Mock) }
+      service_mocks = services.map {|s| s.const_get(:Mock) }
+
+      service_mocks.each do |service_mock|
+        next unless service_mock.respond_to?(:reset)
+        service_mock.reset
+      end
+    end
+
   end
 
 end

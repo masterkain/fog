@@ -1,25 +1,9 @@
 module Fog
   module Rackspace
-    class Files
-
-      def self.new(attributes = {})
-        location = caller.first
-        warning = "[yellow][WARN] Fog::Rackspace::Files#new is deprecated, use Fog::Rackspace::Storage#new instead[/]"
-        warning << " [light_black](" << location << ")[/] "
-        Formatador.display_line(warning)
-        Fog::Rackspace::Storage.new(attributes)
-      end
-
-    end
-  end
-end
-
-module Fog
-  module Rackspace
     class Storage < Fog::Service
 
       requires :rackspace_api_key, :rackspace_username
-      recognizes :rackspace_auth_url, :persistent
+      recognizes :rackspace_auth_url, :rackspace_servicenet, :rackspace_cdn_ssl, :persistent
       recognizes :provider # remove post deprecation
 
       model_path 'fog/storage/models/rackspace'
@@ -50,27 +34,6 @@ module Fog
           )
         end
 
-        def parse_data(data)
-          metadata = {
-            :body => nil,
-            :headers => {}
-          }
-
-          if data.is_a?(String)
-            metadata[:body] = data
-            metadata[:headers]['Content-Length'] = metadata[:body].size.to_s
-          else
-            filename = ::File.basename(data.path)
-            unless (mime_types = MIME::Types.of(filename)).empty?
-              metadata[:headers]['Content-Type'] = mime_types.first.content_type
-            end
-            metadata[:body] = data.read
-            metadata[:headers]['Content-Length'] = ::File.size(data.path).to_s
-          end
-          # metadata[:headers]['Content-MD5'] = Base64.encode64(Digest::MD5.digest(metadata[:body])).strip
-          metadata
-        end
-
       end
 
       class Mock
@@ -82,10 +45,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -99,13 +60,21 @@ module Fog
           require 'mime/types'
           @rackspace_api_key = options[:rackspace_api_key]
           @rackspace_username = options[:rackspace_username]
-          @data = self.class.data[@rackspace_username]
+        end
+
+        def data
+          self.class.data[@rackspace_username]
+        end
+
+        def reset_data
+          self.class.data.delete(@rackspace_username)
         end
 
       end
 
       class Real
         include Utils
+        attr_reader :rackspace_cdn_ssl
 
         def initialize(options={})
           unless options.delete(:provider)
@@ -119,19 +88,21 @@ module Fog
           require 'json'
           @rackspace_api_key = options[:rackspace_api_key]
           @rackspace_username = options[:rackspace_username]
+          @rackspace_cdn_ssl = options[:rackspace_cdn_ssl]
           credentials = Fog::Rackspace.authenticate(options)
           @auth_token = credentials['X-Auth-Token']
 
           uri = URI.parse(credentials['X-Storage-Url'])
-          @host   = uri.host
+          @host   = options[:rackspace_servicenet] == true ? "snet-#{uri.host}" : uri.host
           @path   = uri.path
           @port   = uri.port
           @scheme = uri.scheme
+          Excon.ssl_verify_peer = false if options[:rackspace_servicenet] == true
           @connection = Fog::Connection.new("#{@scheme}://#{@host}:#{@port}", options[:persistent])
         end
 
         def reload
-          @storage_connection.reset
+          @connection.reset
         end
 
         def request(params, parse_json = true, &block)

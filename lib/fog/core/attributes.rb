@@ -113,12 +113,18 @@ module Fog
 
     module InstanceMethods
 
-      def _dump
+      def _dump(level)
         Marshal.dump(attributes)
       end
 
       def attributes
         @attributes ||= {}
+      end
+
+      def dup
+        copy = super
+        copy.dup_attributes!
+        copy
       end
 
       def identity
@@ -152,7 +158,9 @@ module Fog
       def requires(*args)
         missing = []
         for arg in [:connection] | args
-          missing << arg unless send("#{arg}")
+          unless send("#{arg}") || attributes.has_key?(arg)
+            missing << arg
+          end
         end
         unless missing.empty?
           if missing.length == 1
@@ -161,6 +169,12 @@ module Fog
             raise(ArgumentError, "#{missing[0...-1].join(", ")} and #{missing[-1]} are required for this operation")
           end
         end
+      end
+
+      protected
+
+      def dup_attributes!
+        @attributes = @attributes.dup
       end
 
       private

@@ -1,5 +1,3 @@
-require 'fog/core/parser'
-
 module Fog
   module NewServers
     class Compute < Fog::Service
@@ -27,10 +25,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -42,7 +38,14 @@ module Fog
           end
 
           @new_server_username = options[:new_servers_username]
-          @data = self.class.data[@new_server_username]
+        end
+
+        def data
+          self.class.data[@new_server_username]
+        end
+
+        def reset_data
+          self.class.data.delete(@new_server_username)
         end
 
       end
@@ -56,6 +59,8 @@ module Fog
             warning << " [light_black](" << location << ")[/] "
             Formatador.display_line(warning)
           end
+
+          require 'fog/core/parser'
 
           @new_servers_password = options[:new_servers_password]
           @new_servers_username = options[:new_servers_username]

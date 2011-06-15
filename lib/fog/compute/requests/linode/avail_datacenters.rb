@@ -2,7 +2,7 @@ module Fog
   module Linode
     class Compute
       class Real
-
+        
         # Get available data centers
         #
         # ==== Returns
@@ -16,15 +16,6 @@ module Fog
             :query    => { :api_action => 'avail.datacenters' }
           )
         end
-
-      end
-
-      class Mock
-
-        def avail_datacenters
-          Fog::Mock.not_implemented
-        end
-
       end
     end
   end

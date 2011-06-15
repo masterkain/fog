@@ -6,11 +6,11 @@ Shindo.tests('AWS::SimpleDB | attributes requests', ['aws']) do
 
   tests('success') do
 
-    tests("#batch_put_attributes('#{@domain_name}', { 'a' => { 'b' => 'c' }, 'x' => { 'y' => 'z' } }).body").formats(AWS::SimpleDB::Formats::BASIC) do
-      AWS[:sdb].batch_put_attributes(@domain_name, { 'a' => { 'b' => 'c' }, 'x' => { 'y' => 'z' } }).body
+    tests("#batch_put_attributes('#{@domain_name}', { 'a' => { 'b' => 'c', 'd' => 'e' }, 'x' => { 'y' => 'z' } }).body").formats(AWS::SimpleDB::Formats::BASIC) do
+      AWS[:sdb].batch_put_attributes(@domain_name, { 'a' => { 'b' => 'c', 'd' => 'e' }, 'x' => { 'y' => 'z' } }).body
     end
 
-    tests("#get_attributes('#{@domain_name}', 'a').body['Attributes']").returns({'b' => ['c']}) do
+    tests("#get_attributes('#{@domain_name}', 'a').body['Attributes']").returns({'b' => ['c'], 'd' => ['e']}) do
       attributes = {}
       Fog.wait_for {
         attributes = AWS[:sdb].get_attributes(@domain_name, 'a').body['Attributes']
@@ -23,7 +23,7 @@ Shindo.tests('AWS::SimpleDB | attributes requests', ['aws']) do
       AWS[:sdb].get_attributes(@domain_name, 'notanattribute')
     end
 
-    tests("#select('select * from #{@domain_name}').body['Items']").returns({ 'a' => { 'b' => ['c'] }, 'x' => { 'y' => ['z'] } }) do
+    tests("#select('select * from #{@domain_name}').body['Items']").returns({'a' => { 'b' => ['c'], 'd' => ['e']}, 'x' => { 'y' => ['z'] } }) do
       pending if Fog.mocking?
       AWS[:sdb].select("select * from #{@domain_name}").body['Items']
     end
@@ -36,12 +36,28 @@ Shindo.tests('AWS::SimpleDB | attributes requests', ['aws']) do
       AWS[:sdb].put_attributes(@domain_name, 'conditional', { 'version' => '2' }, :expect => { 'version' => '1' }, :replace => ['version']).body
     end
 
+    # Verify that we can delete individual attributes.
+    tests("#delete_attributes('#{@domain_name}', 'a', {'d' => []})").succeeds do
+      AWS[:sdb].delete_attributes(@domain_name, 'a', {'d' => []}).body
+    end
+
+    # Verify that individually deleted attributes are actually removed.
+    tests("#get_attributes('#{@domain_name}', 'a', ['d']).body['Attributes']").returns({'d' => nil}) do
+      AWS[:sdb].get_attributes(@domain_name, 'a', ['d']).body['Attributes']
+    end
+
     tests("#delete_attributes('#{@domain_name}', 'a').body").formats(AWS::SimpleDB::Formats::BASIC) do
       AWS[:sdb].delete_attributes(@domain_name, 'a').body
     end
 
+    # Verify that we can delete entire domain, item combinations.
     tests("#delete_attributes('#{@domain_name}', 'a').body").succeeds do
       AWS[:sdb].delete_attributes(@domain_name, 'a').body
+    end
+
+    # Verify that deleting a domain, item combination removes all related attributes.
+    tests("#get_attributes('#{@domain_name}', 'a').body['Attributes']").returns({}) do
+      AWS[:sdb].get_attributes(@domain_name, 'a').body['Attributes']
     end
 
   end

@@ -39,6 +39,23 @@ module Fog
           end
         end
 
+        alias :each_file_this_page :each
+        def each
+          if !block_given?
+            self
+          else
+            subset = dup.all
+
+            subset.each_file_this_page {|f| yield f}
+            while subset.is_truncated
+              subset = subset.all(:marker => subset.last.key)
+              subset.each_file_this_page {|f| yield f}
+            end
+
+            self
+          end
+        end
+
         def get(key, options = {}, &block)
           requires :directory
           data = connection.get_object(directory.key, key, options, &block)
@@ -46,9 +63,17 @@ module Fog
             :body => data.body,
             :key  => key
           })
+          normalise_headers(file_data)
           new(file_data)
-        rescue Excon::Errors::NotFound
-          nil
+        rescue Excon::Errors::NotFound => error
+          case error.message
+          when /<Code>NoSuchKey<\/Code>/
+            nil
+          when /<Code>NoSuchBucket<\/Code>/
+            raise(Fog::AWS::Storage::NotFound.new("Directory #{directory.identity} does not exist."))
+          else
+            raise(error)
+          end
         end
 
         def get_url(key, expires)
@@ -62,6 +87,7 @@ module Fog
           file_data = data.headers.merge({
             :key => key
           })
+          normalise_headers(file_data)
           new(file_data)
         rescue Excon::Errors::NotFound
           nil
@@ -70,6 +96,11 @@ module Fog
         def new(attributes = {})
           requires :directory
           super({ :directory => directory }.merge!(attributes))
+        end
+
+        def normalise_headers(headers)
+          headers['Last-Modified'] = Time.parse(headers['Last-Modified'])
+          headers['ETag'].gsub!('"','')
         end
 
       end

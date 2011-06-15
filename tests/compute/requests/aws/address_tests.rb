@@ -8,7 +8,7 @@ Shindo.tests('AWS::Compute | address requests', ['aws']) do
     'requestId' => String
   }
 
-  @server = AWS[:compute].servers.create(:image_id => GENTOO_AMI)
+  @server = AWS[:compute].servers.create
   @server.wait_for { ready? }
   @ip_address = @server.ip_address
 
@@ -26,11 +26,11 @@ Shindo.tests('AWS::Compute | address requests', ['aws']) do
       AWS[:compute].describe_addresses.body
     end
 
-    tests("#describe_addresses('public-ip' => #{@public_Ip}')").formats(@addresses_format) do
+    tests("#describe_addresses('public-ip' => #{@public_ip}')").formats(@addresses_format) do
       AWS[:compute].describe_addresses('public-ip' => @public_ip).body
     end
 
-    tests("#associate_addresses('#{@server.identity}', '#{@public_Ip}')").formats(AWS::Compute::Formats::BASIC) do
+    tests("#associate_addresses('#{@server.identity}', '#{@public_ip}')").formats(AWS::Compute::Formats::BASIC) do
       AWS[:compute].associate_address(@server.identity, @public_ip).body
     end
 

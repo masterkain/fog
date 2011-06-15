@@ -12,18 +12,10 @@ module Fog
         def head_object(container, object)
           response = request({
             :expects  => 200,
-            :method   => 'GET',
-            :path     => "#{CGI.escape(container)}/#{CGI.escape(object)}"
+            :method   => 'HEAD',
+            :path     => "#{URI.escape(container)}/#{URI.escape(object)}"
           }, false)
           response
-        end
-
-      end
-
-      class Mock
-
-        def head_object(container, object)
-          Fog::Mock.not_implemented
         end
 
       end

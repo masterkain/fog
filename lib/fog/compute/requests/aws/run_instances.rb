@@ -79,6 +79,8 @@ module Fog
         #     * 'ownerId'<~String> - Id of owner
         #     * 'requestId'<~String> - Id of request
         #     * 'reservationId'<~String> - Id of reservation
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-RunInstances.html]
         def run_instances(image_id, min_count, max_count, options = {})
           if block_device_mapping = options.delete('BlockDeviceMapping')
             block_device_mapping.each_with_index do |mapping, index|
@@ -114,9 +116,13 @@ module Fog
           response = Excon::Response.new
           response.status = 200
 
-          group_set = [ (options['GroupId'] || 'default') ]
+          group_set = [ (options['SecurityGroup'] || 'default') ].flatten
           instances_set = []
           reservation_id = Fog::AWS::Mock.reservation_id
+
+          if options['KeyName'] && describe_key_pairs('key-name' => options['KeyName']).body['keySet'].empty?
+            raise Fog::AWS::Compute::NotFound.new("The key pair '#{options['KeyName']}' does not exist")
+          end
 
           min_count.times do |i|
             instance_id = Fog::AWS::Mock.instance_id
@@ -130,10 +136,10 @@ module Fog
               'instanceState'       => { 'code' => 0, 'name' => 'pending' },
               'instanceType'        => options['InstanceType'] || 'm1.small',
               'kernelId'            => options['KernelId'] || Fog::AWS::Mock.kernel_id,
-              # 'keyName'             => options['KeyName'],
+              'keyName'             => options['KeyName'],
               'launchTime'          => Time.now,
               'monitoring'          => { 'state' => options['Monitoring.Enabled'] || false },
-              'placement'           => { 'availabilityZone' => options['Placement.AvailabilityZone'] || Fog::AWS::Mock.availability_zone },
+              'placement'           => { 'availabilityZone' => options['Placement.AvailabilityZone'] || Fog::AWS::Mock.availability_zone(@region) },
               'privateDnsName'      => nil,
               'productCodes'        => [],
               'ramdiskId'           => options['RamdiskId'] || Fog::AWS::Mock.ramdisk_id,
@@ -141,10 +147,10 @@ module Fog
               'rootDeviceType'      => 'instance-store'
             }
             instances_set << instance
-            @data[:instances][instance_id] = instance.merge({
+            self.data[:instances][instance_id] = instance.merge({
               'architecture'        => 'i386',
               'groupSet'            => group_set,
-              'ownerId'             => @owner_id,
+              'ownerId'             => self.data[:owner_id],
               'privateIpAddress'    => nil,
               'reservationId'       => reservation_id,
               'stateReason'         => {},
@@ -154,7 +160,7 @@ module Fog
           response.body = {
             'groupSet'      => group_set,
             'instancesSet'  => instances_set,
-            'ownerId'       => @owner_id,
+            'ownerId'       => self.data[:owner_id],
             'requestId'     => Fog::AWS::Mock.request_id,
             'reservationId' => reservation_id
           }

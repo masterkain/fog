@@ -3,6 +3,8 @@ module Fog
     class Compute
       class Real
 
+        require 'fog/compute/parsers/aws/basic'
+
         # Delete a security group that you own
         #
         # ==== Parameters
@@ -13,6 +15,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> - Id of request
         #     * 'return'<~Boolean> - success?
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DeleteSecurityGroup.html]
         def delete_security_group(name)
           request(
             'Action'    => 'DeleteSecurityGroup',
@@ -27,8 +31,8 @@ module Fog
       class Mock
         def delete_security_group(name)
           response = Excon::Response.new
-          if @data[:security_groups][name]
-            @data[:security_groups].delete(name)
+          if self.data[:security_groups][name]
+            self.data[:security_groups].delete(name)
             response.status = 200
             response.body = {
               'requestId' => Fog::AWS::Mock.request_id,

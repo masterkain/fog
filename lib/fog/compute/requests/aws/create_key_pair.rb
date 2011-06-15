@@ -17,6 +17,8 @@ module Fog
         #     * 'keyMaterial'<~String> - Unencrypted encoded PEM private key
         #     * 'keyName'<~String> - Name of key
         #     * 'requestId'<~String> - Id of request
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CreateKeyPair.html]
         def create_key_pair(key_name)
           request(
             'Action'  => 'CreateKeyPair',
@@ -31,14 +33,14 @@ module Fog
 
         def create_key_pair(key_name)
           response = Excon::Response.new
-          unless @data[:key_pairs][key_name]
+          unless self.data[:key_pairs][key_name]
             response.status = 200
             data = {
               'keyFingerprint'  => Fog::AWS::Mock.key_fingerprint,
               'keyMaterial'     => Fog::AWS::Mock.key_material,
               'keyName'         => key_name
             }
-            @data[:key_pairs][key_name] = data
+            self.data[:key_pairs][key_name] = data
             response.body = {
               'requestId' => Fog::AWS::Mock.request_id
             }.merge!(data)

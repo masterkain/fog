@@ -5,6 +5,8 @@ module Fog
     class Compute
 
       class Server < Fog::Model
+        extend Fog::Deprecation
+        deprecate :ip_address, :public_ip_address
 
         identity  :id,                    :aliases => 'instanceId'
 
@@ -18,7 +20,6 @@ module Fog
         attribute :flavor_id,             :aliases => 'instanceType'
         attribute :image_id,              :aliases => 'imageId'
         attr_accessor :instance_initiated_shutdown_behavior
-        attribute :ip_address,            :aliases => 'ipAddress'
         attribute :kernel_id,             :aliases => 'kernelId'
         attribute :key_name,              :aliases => 'keyName'
         attribute :created_at,            :aliases => 'launchTime'
@@ -26,6 +27,7 @@ module Fog
         attribute :product_codes,         :aliases => 'productCodes'
         attribute :private_dns_name,      :aliases => 'privateDnsName'
         attribute :private_ip_address,    :aliases => 'privateIpAddress'
+        attribute :public_ip_address,     :aliases => 'ipAddress'
         attribute :ramdisk_id,            :aliases => 'ramdiskId'
         attribute :reason
         attribute :root_device_name,      :aliases => 'rootDeviceName'
@@ -40,8 +42,22 @@ module Fog
         attr_writer   :private_key, :private_key_path, :public_key, :public_key_path, :username
 
         def initialize(attributes={})
-          self.groups ||= ["default"] unless attributes[:subnet_id]
-          self.flavor_id ||= 'm1.small'
+          self.groups     ||= ["default"] unless attributes[:subnet_id]
+          self.flavor_id  ||= 't1.micro'
+          self.image_id ||= begin
+            case attributes[:connection].instance_variable_get(:@region) # Ubuntu 10.04 LTS 64bit (EBS)
+            when 'ap-northeast-1'
+              'ami-5e0fa45f'
+            when 'ap-southeast-1'
+              'ami-f092eca2'
+            when 'eu-west-1'
+              'ami-3d1f2b49'
+            when 'us-east-1'
+              'ami-3202f25b'
+            when 'us-west-1'
+              'ami-f5bfefb0'
+            end
+          end
           super
         end
 
@@ -80,7 +96,7 @@ module Fog
         def key_pair
           requires :key_name
 
-          connection.keypairs.all(key_name).first
+          connection.key_pairs.all(key_name).first
         end
 
         def key_pair=(new_keypair)
@@ -150,7 +166,7 @@ module Fog
         end
 
         def setup(credentials = {})
-          requires :identity, :ip_address, :username
+          requires :identity, :public_ip_address, :username
           require 'json'
 
           commands = [
@@ -165,7 +181,7 @@ module Fog
           Timeout::timeout(120) do
             begin
               Timeout::timeout(4) do
-                Fog::SSH.new(ip_address, username, credentials).run(commands)
+                Fog::SSH.new(public_ip_address, username, credentials).run(commands)
               end
             rescue Net::SSH::AuthenticationFailed, Timeout::Error
               retry
@@ -177,11 +193,19 @@ module Fog
         end
 
         def ssh(commands)
-          requires :identity, :ip_address, :username
+          requires :identity, :public_ip_address, :username
 
           options = {}
           options[:key_data] = [private_key] if private_key
-          Fog::SSH.new(ip_address, username, options).run(commands)
+          Fog::SSH.new(public_ip_address, username, options).run(commands)
+        end
+
+        def scp(local_path, remote_path, upload_options = {})
+          requires :public_ip_address, :username
+
+          scp_options = {}
+          scp_options[:key_data] = [private_key] if private_key
+          Fog::SCP.new(public_ip_address, username, scp_options).upload(local_path, remote_path, upload_options)
         end
 
         def start
@@ -203,6 +227,23 @@ module Fog
         def volumes
           requires :id
           connection.volumes(:server => self)
+        end
+
+        #I tried to call it monitoring= and be smart with attributes[]
+        #but in #save a merge_attribute is called after run_instance
+        #thus making an un-necessary request. Use this until finding a clever solution
+        def monitor=(new_monitor)
+          if identity
+            case new_monitor
+            when true
+              response = connection.monitor_instances(identity)
+            when false
+              response = connection.unmonitor_instances(identity)
+            else
+              raise ArgumentError.new("only Boolean allowed here")
+            end
+          end
+          self.monitoring = new_monitor
         end
 
       end

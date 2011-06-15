@@ -16,13 +16,14 @@ module Fog
         attribute :name
         attribute :personality
         attribute :progress
-        attribute :status
+        attribute :state,       :aliases => 'status'
 
         attr_reader :password
         attr_writer :private_key, :private_key_path, :public_key, :public_key_path, :username
 
         def initialize(attributes={})
-          self.flavor_id ||= 1
+          self.flavor_id  ||= 1  # 256 server
+          self.image_id   ||= 49 # Ubuntu 10.04 LTS 64bit
           super
         end
 
@@ -47,6 +48,10 @@ module Fog
           connection.images(:server => self)
         end
 
+        def private_ip_address
+          nil
+        end
+
         def private_key_path
           @private_key_path ||= Fog.credentials[:private_key_path]
           @private_key_path &&= File.expand_path(@private_key_path)
@@ -54,6 +59,10 @@ module Fog
 
         def private_key
           @private_key ||= private_key_path && File.read(private_key_path)
+        end
+
+        def public_ip_address
+          addresses['public'].first
         end
 
         def public_key_path
@@ -66,7 +75,7 @@ module Fog
         end
 
         def ready?
-          status == 'ACTIVE'
+          self.state == 'ACTIVE'
         end
 
         def reboot(type = 'SOFT')
@@ -90,8 +99,8 @@ module Fog
         end
 
         def setup(credentials = {})
-          requires :addresses, :identity, :public_key, :username
-          Fog::SSH.new(addresses['public'].first, username, credentials).run([
+          requires :public_ip_address, :identity, :public_key, :username
+          Fog::SSH.new(public_ip_address, username, credentials).run([
             %{mkdir .ssh},
             %{echo "#{public_key}" >> ~/.ssh/authorized_keys},
             %{passwd -l #{username}},
@@ -104,11 +113,19 @@ module Fog
         end
 
         def ssh(commands)
-          requires :addresses, :identity, :username
+          requires :public_ip_address, :identity, :username
 
           options = {}
           options[:key_data] = [private_key] if private_key
-          Fog::SSH.new(addresses['public'].first, username, options).run(commands)
+          Fog::SSH.new(public_ip_address, username, options).run(commands)
+        end
+
+        def scp(local_path, remote_path, upload_options = {})
+          requires :public_ip_address, :username
+
+          scp_options = {}
+          scp_options[:key_data] = [private_key] if private_key
+          Fog::SCP.new(public_ip_address, username, scp_options).upload(local_path, remote_path, upload_options)
         end
 
         def username

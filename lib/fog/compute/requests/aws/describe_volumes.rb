@@ -27,6 +27,8 @@ module Fog
         #         * 'instanceId'<~String> - Reference to attached instance
         #         * 'status'<~String> - Attachment state
         #         * 'volumeId'<~String> - Reference to volume
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeVolumes.html]
         def describe_volumes(filters = {})
           unless filters.is_a?(Hash)
             Formatador.display_line("[yellow][WARN] describe_volumes with #{filters.class} param is deprecated, use describe_volumes('volume-id' => []) instead[/] [light_black](#{caller.first})[/]")
@@ -50,15 +52,11 @@ module Fog
             filters = {'volume-id' => [*filters]}
           end
 
-          if filters.keys.any? {|key| key =~ /^tag/}
-            Formatador.display_line("[yellow][WARN] describe_volumes tag filters are not yet mocked[/] [light_black](#{caller.first})[/]")
-            Fog::Mock.not_implemented
-          end
-
           response = Excon::Response.new
 
-          volume_set = @data[:volumes].values
-
+          volume_set = self.data[:volumes].values
+          volume_set = apply_tag_filters(volume_set, filters)
+          
           aliases = {
             'availability-zone' => 'availabilityZone',
             'create-time' => 'createTime',
@@ -87,22 +85,22 @@ module Fog
           volume_set.each do |volume|
             case volume['status']
             when 'attaching'
-              if Time.now - volume['attachmentSet'].first['attachTime'] > Fog::Mock.delay
+              if Time.now - volume['attachmentSet'].first['attachTime'] >= Fog::Mock.delay
                 volume['attachmentSet'].first['status'] = 'in-use'
                 volume['status'] = 'in-use'
               end
             when 'creating'
-              if Time.now - volume['createTime'] > Fog::Mock.delay
+              if Time.now - volume['createTime'] >= Fog::Mock.delay
                 volume['status'] = 'available'
               end
             when 'deleting'
-              if Time.now - @data[:deleted_at][volume['volumeId']] > Fog::Mock.delay
-                @data[:deleted_at].delete(volume['volumeId'])
-                @data[:volumes].delete(volume['volumeId'])
+              if Time.now - self.data[:deleted_at][volume['volumeId']] >= Fog::Mock.delay
+                self.data[:deleted_at].delete(volume['volumeId'])
+                self.data[:volumes].delete(volume['volumeId'])
               end
             end
           end
-          volume_set = volume_set.reject {|volume| !@data[:volumes][volume['volumeId']]}
+          volume_set = volume_set.reject {|volume| !self.data[:volumes][volume['volumeId']]}
 
           response.status = 200
           response.body = {

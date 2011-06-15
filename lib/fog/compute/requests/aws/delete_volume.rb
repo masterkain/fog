@@ -3,6 +3,8 @@ module Fog
     class Compute
       class Real
 
+        require 'fog/compute/parsers/aws/basic'
+
         # Delete an EBS volume
         #
         # ==== Parameters
@@ -13,6 +15,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> - Id of request
         #     * 'return'<~Boolean> - success?
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DeleteVolume.html]
         def delete_volume(volume_id)
           request(
             'Action'    => 'DeleteVolume',
@@ -28,12 +32,12 @@ module Fog
 
         def delete_volume(volume_id)
           response = Excon::Response.new
-          if volume = @data[:volumes][volume_id]
+          if volume = self.data[:volumes][volume_id]
             if volume["attachmentSet"].any?
               attach = volume["attachmentSet"].first
               raise Fog::AWS::Compute::Error.new("Client.VolumeInUse => Volume #{volume_id} is currently attached to #{attach["instanceId"]}")
             end
-            @data[:deleted_at][volume_id] = Time.now
+            self.data[:deleted_at][volume_id] = Time.now
             volume['status'] = 'deleting'
             response.status = 200
             response.body = {

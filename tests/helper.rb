@@ -8,8 +8,8 @@ def lorem_file
 end
 
 # check to see which credentials are available and add others to the skipped tags list
-all_providers = ['aws', 'bluebox', 'brightbox', 'gogrid', 'google', 'linode', 'local', 'newservers', 'rackspace', 'slicehost', 'terremarkecloud', 'zerigo', 'dynect']
-available_providers = Fog.providers.map {|provider| provider.to_s.downcase}
+all_providers = ['aws', 'bluebox', 'brightbox', 'dnsimple', 'dnsmadeeasy', 'ecloud', 'gogrid', 'google', 'linode', 'local', 'ninefold', 'newservers', 'rackspace', 'slicehost', 'stormondemand', 'voxel', 'zerigo', 'dynect']
+available_providers = Fog.available_providers.map {|provider| provider.downcase}
 for provider in (all_providers - available_providers)
   Formatador.display_line("[yellow]Skipping tests for [bold]#{provider}[/] [yellow]due to lacking credentials (add some to '~/.fog' to run them)[/]")
   Thread.current[:tags] << ('-' << provider)

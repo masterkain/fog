@@ -13,7 +13,7 @@ module Fog
         # ==== Returns
         # * response<~Excon::Response>:
         #   * body<~Array>:
-        # TODO: docs
+        # TODO: docs        
         def linode_reboot(linode_id, options={})
           request(
             :expects  => 200,
@@ -21,15 +21,6 @@ module Fog
             :query    => { :api_action => 'linode.reboot', :linodeId => linode_id }.merge!(options)
           )
         end
-
-      end
-
-      class Mock
-
-        def linode_reboot(linode_id, options={})
-          Fog::Mock.not_implemented
-        end
-
       end
     end
   end

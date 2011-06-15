@@ -5,10 +5,13 @@ module Fog
     class DNS
 
       class Record < Fog::Model
+        extend Fog::Deprecation
+        deprecate :ip, :value
+        deprecate :ip=, :value=
 
         identity :id,           :aliases => ['Id']
 
-        attribute :ip,          :aliases => ['ResourceRecords']
+        attribute :value,       :aliases => ['ResourceRecords']
         attribute :name,        :aliases => ['Name']
         attribute :ttl,         :aliases => ['TTL']
         attribute :type,        :aliases => ['Type']
@@ -16,16 +19,16 @@ module Fog
         attribute :created_at,  :aliases => ['SubmittedAt']
 
         def initialize(attributes={})
-          self.ttl    ||= 3600
+          self.ttl ||= 3600
           super
         end
 
         def destroy
-          requires :ip, :name, :ttl, :type, :zone
+          requires :name, :ttl, :type, :value, :zone
           options = {
             :action           => 'DELETE',
             :name             => name,
-            :resource_records => [*ip],
+            :resource_records => [*value],
             :ttl              => ttl,
             :type             => type
           }
@@ -38,11 +41,11 @@ module Fog
         end
 
         def save
-          requires :ip, :name, :ttl, :type, :zone
+          requires :name, :ttl, :type, :value, :zone
           options = {
             :action           => 'CREATE',
             :name             => name,
-            :resource_records => [*ip],
+            :resource_records => [*value],
             :ttl              => ttl,
             :type             => type
           }

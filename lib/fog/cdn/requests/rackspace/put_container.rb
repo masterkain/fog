@@ -3,7 +3,7 @@ module Fog
     class CDN
       class Real
 
-        # modify CDN properties for a container
+        # enable CDN for a container
         #
         # ==== Parameters
         # * name<~String> - Name for container, should be < 256 bytes and must not contain '/'
@@ -22,14 +22,6 @@ module Fog
             :path     => CGI.escape(name)
           )
           response
-        end
-
-      end
-
-      class Mock
-
-        def put_container(name, options = {})
-          Fog::Mock.not_implemented
         end
 
       end

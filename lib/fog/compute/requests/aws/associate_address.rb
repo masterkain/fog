@@ -3,6 +3,8 @@ module Fog
     class Compute
       class Real
 
+        require 'fog/compute/parsers/aws/basic'
+
         # Associate an elastic IP address with an instance
         #
         # ==== Parameters
@@ -14,6 +16,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> - Id of request
         #     * 'return'<~Boolean> - success?
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-AssociateAddress.html]
         def associate_address(instance_id, public_ip)
           request(
             'Action'      => 'AssociateAddress',
@@ -31,11 +35,15 @@ module Fog
         def associate_address(instance_id, public_ip)
           response = Excon::Response.new
           response.status = 200
-          instance = @data[:instances][instance_id]
-          address = @data[:addresses][public_ip]
+          instance = self.data[:instances][instance_id]
+          address = self.data[:addresses][public_ip]
           if instance && address
             address['instanceId'] = instance_id
             instance['originalIpAddress'] = instance['ipAddress']
+            # detach other address (if any)
+            if self.data[:addresses][instance['originalIpAddress']]
+              self.data[:addresses][instance['originalIpAddress']]['instanceId'] = nil
+            end
             instance['ipAddress'] = public_ip
             instance['dnsName'] = Fog::AWS::Mock.dns_name_for(public_ip)
             response.status = 200

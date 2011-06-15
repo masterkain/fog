@@ -17,18 +17,10 @@ module Fog
           response = request(
             :expects  => 204,
             :method   => 'HEAD',
-            :path     => container,
+            :path     => URI.escape(container),
             :query    => {'format' => 'json'}
           )
           response
-        end
-
-      end
-
-      class Mock
-
-        def head_container(container)
-          Fog::Mock.not_implemented
         end
 
       end

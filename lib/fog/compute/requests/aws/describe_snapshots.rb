@@ -23,6 +23,8 @@ module Fog
         #       * 'startTime'<~Time>: Timestamp of when snapshot was initiated
         #       * 'status'<~String>: Snapshot state, in ['pending', 'completed']
         #       * 'volumeId'<~String>: Id of volume that snapshot contains
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeSnapshots.html]
         def describe_snapshots(filters = {}, options = {})
           unless filters.is_a?(Hash)
             Formatador.display_line("[yellow][WARN] describe_snapshots with #{filters.class} param is deprecated, use describe_snapshots('snapshot-id' => []) instead[/] [light_black](#{caller.first})[/]")
@@ -59,14 +61,9 @@ module Fog
             Formatador.display_line("[yellow][WARN] describe_snapshots with a second param is deprecated, use describe_snapshots(options) instead[/] [light_black](#{caller.first})[/]")
           end
 
-          if filters.keys.any? {|key| key =~ /^tag/}
-            Formatador.display_line("[yellow][WARN] describe_snapshots tag filters are not yet mocked[/] [light_black](#{caller.first})[/]")
-            Fog::Mock.not_implemented
-          end
-
           response = Excon::Response.new
 
-          snapshot_set = @data[:snapshots].values
+          snapshot_set = self.data[:snapshots].values
 
           if filters.delete('owner-alias')
             Formatador.display_line("[yellow][WARN] describe_snapshots with owner-alias is not mocked[/] [light_black](#{caller.first})[/]")
@@ -75,6 +72,8 @@ module Fog
             Formatador.display_line("[yellow][WARN] describe_snapshots with RestorableBy is not mocked[/] [light_black](#{caller.first})[/]")
           end
 
+          snapshot_set = apply_tag_filters(snapshot_set, filters)
+          
           aliases = {
             'description' => 'description',
             'owner-id'    => 'ownerId',
@@ -85,18 +84,19 @@ module Fog
             'volume-id'   => 'volumeId',
             'volume-size' => 'volumeSize'
           }
+          
           for filter_key, filter_value in filters
             aliased_key = aliases[filter_key]
             snapshot_set = snapshot_set.reject{|snapshot| ![*filter_value].include?(snapshot[aliased_key])}
           end
-
+          
           snapshot_set.each do |snapshot|
             case snapshot['status']
             when 'in progress', 'pending'
-              if Time.now - snapshot['startTime'] > Fog::Mock.delay * 2
+              if Time.now - snapshot['startTime'] >= Fog::Mock.delay * 2
                 snapshot['progress']  = '100%'
                 snapshot['status']    = 'completed'
-              elsif Time.now - snapshot['startTime'] > Fog::Mock.delay
+              elsif Time.now - snapshot['startTime'] >= Fog::Mock.delay
                 snapshot['progress']  = '50%'
                 snapshot['status']    = 'in progress'
               else

@@ -3,6 +3,8 @@ module Fog
     class Compute
       class Real
 
+        require 'fog/compute/parsers/aws/basic'
+
         # Delete a key pair that you own
         #
         # ==== Parameters
@@ -13,6 +15,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> id of request
         #     * 'return'<~Boolean> - success?
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DeleteKeyPair.html]
         def delete_key_pair(key_name)
           request(
             'Action'    => 'DeleteKeyPair',
@@ -28,7 +32,7 @@ module Fog
 
         def delete_key_pair(key_name)
           response = Excon::Response.new
-          @data[:key_pairs].delete(key_name)
+          self.data[:key_pairs].delete(key_name)
           response.status = 200
           response.body = {
             'requestId' => Fog::AWS::Mock.request_id,

@@ -19,10 +19,8 @@ module Fog
           end
         end
 
-        def self.reset_data(keys=data.keys)
-          for key in [*keys]
-            data.delete(key)
-          end
+        def self.reset
+          @data = nil
         end
 
         def initialize(options={})
@@ -37,7 +35,10 @@ module Fog
           end
 
           @local_root = ::File.expand_path(options[:local_root])
-          @data       = self.class.data[@local_root]
+        end
+
+        def data
+          self.class.data[@local_root]
         end
 
         def local_root
@@ -47,6 +48,11 @@ module Fog
         def path_to(partial)
           ::File.join(@local_root, partial)
         end
+
+        def reset_data
+          self.class.data.delete(@local_root)
+        end
+
       end
 
       class Real

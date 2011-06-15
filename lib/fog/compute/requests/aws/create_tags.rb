@@ -3,6 +3,8 @@ module Fog
     class Compute
       class Real
 
+        require 'fog/compute/parsers/aws/basic'
+
         # Adds tags to resources
         #
         # ==== Parameters
@@ -14,6 +16,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> - Id of request
         #     * 'return'<~Boolean> - success?
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CreateTags.html]
         def create_tags(resources, tags)
           resources = [*resources]
           for key, value in tags
@@ -49,7 +53,7 @@ module Fog
             when /^vol\-[a-z0-9]{8}$/i
               'volume'
             end
-            if type && @data[:"#{type}s"][resource_id]
+            if type && self.data[:"#{type}s"][resource_id]
               { 'resourceId' => resource_id, 'resourceType' => type }
             else
               raise(Fog::Service::NotFound.new("The #{type} ID '#{resource_id}' does not exist"))
@@ -57,9 +61,11 @@ module Fog
           end
 
           tags.each do |key, value|
-            @data[:tags][key] ||= {}
-            @data[:tags][key][value] ||= []
-            @data[:tags][key][value] = @data[:tags][key][value] & tagged
+            self.data[:tags][key] ||= {}
+            self.data[:tags][key][value] ||= []
+            self.data[:tags][key][value] = self.data[:tags][key][value] & tagged
+            
+            tagged.each {|resource| self.data[:"#{resource['resourceType']}s"][resource['resourceId']]['tagSet'][key] = value}
           end
 
           response = Excon::Response.new

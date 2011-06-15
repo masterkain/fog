@@ -23,7 +23,7 @@ module Fog
         # http://docs.amazonwebservices.com/AmazonS3/latest/API/mpUploadUploadPart.html
         #
         def upload_part(bucket_name, object_name, upload_id, part_number, data, options = {})
-          data = parse_data(data)
+          data = Fog::Storage.parse_data(data)
           headers = options
           headers['Content-Length'] = data[:headers]['Content-Length']
           request({
@@ -38,14 +38,6 @@ module Fog
         end
 
       end # Real
-
-      class Mock # :nodoc:all
-
-        def upload_part(bucket_name, object_name, upload_id, part_number, data, options = {})
-          Fog::Mock.not_implemented
-        end
-
-      end # Mock
     end # Storage
   end # AWS
 end # Fog

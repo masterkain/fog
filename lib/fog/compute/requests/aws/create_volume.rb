@@ -21,6 +21,8 @@ module Fog
         #     * 'snapshotId'<~String> - Snapshot volume was created from, if any
         #     * 'status's<~String> - State of volume
         #     * 'volumeId'<~String> - Reference to volume
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CreateVolume.html]
         def create_volume(availability_zone, size, snapshot_id = nil)
           request(
             'Action'            => 'CreateVolume',
@@ -38,6 +40,10 @@ module Fog
         def create_volume(availability_zone, size, snapshot_id = nil)
           response = Excon::Response.new
           if availability_zone && size
+            if snapshot_id && !self.data[:snapshots][snapshot_id]
+              raise Fog::AWS::Compute::NotFound.new("The snapshot '#{snapshot_id}' does not exist.")
+            end
+
             response.status = 200
             volume_id = Fog::AWS::Mock.volume_id
             data = {
@@ -50,7 +56,7 @@ module Fog
               'tagSet'            => {},
               'volumeId'          => volume_id
             }
-            @data[:volumes][volume_id] = data
+            self.data[:volumes][volume_id] = data
             response.body = {
               'requestId' => Fog::AWS::Mock.request_id
             }.merge!(data.reject {|key,value| !['availabilityZone','createTime','size','snapshotId','status','volumeId'].include?(key) })

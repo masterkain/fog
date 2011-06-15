@@ -3,6 +3,8 @@ module Fog
     class Compute
       class Real
 
+        require 'fog/compute/parsers/aws/basic'
+
         # Delete a snapshot of an EBS volume that you own
         #
         # ==== Parameters
@@ -13,6 +15,8 @@ module Fog
         #   * body<~Hash>:
         #     * 'requestId'<~String> - Id of request
         #     * 'return'<~Boolean> - success?
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DeleteSnapshot.html]
         def delete_snapshot(snapshot_id)
           request(
             'Action'      => 'DeleteSnapshot',
@@ -28,7 +32,7 @@ module Fog
 
         def delete_snapshot(snapshot_id)
           response = Excon::Response.new
-          if snapshot = @data[:snapshots].delete(snapshot_id)
+          if snapshot = self.data[:snapshots].delete(snapshot_id)
             response.status = true
             response.body = {
               'requestId' => Fog::AWS::Mock.request_id,

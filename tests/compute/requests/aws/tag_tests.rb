@@ -5,7 +5,7 @@ Shindo.tests('AWS::Compute | tag requests', ['aws']) do
       'key'          => String,
       'resourceId'   => String,
       'resourceType' => String,
-      'value'        => String
+      'value'        => Fog::Nullable::String
     }],
     'requestId' => String
   }
@@ -29,17 +29,17 @@ Shindo.tests('AWS::Compute | tag requests', ['aws']) do
       AWS[:compute].delete_tags(@volume.identity, 'foo' => 'bar').body
     end
 
+    tests("#delete_tags('vol-00000000', 'baz' => 'qux')").succeeds do
+      pending if Fog.mocking?
+      AWS[:compute].delete_tags('vol-00000000', 'baz' => 'qux')
+    end
+
   end
 
   tests('failure') do
 
     tests("#create_tags('vol-00000000', 'baz' => 'qux')").raises(Fog::Service::NotFound) do
       AWS[:compute].create_tags('vol-00000000', 'baz' => 'qux')
-    end
-
-    tests("#delete_tags('vol-00000000', 'baz' => 'qux')").raises(Fog::Service::NotFound) do
-      pending if Fog.mocking?
-      AWS[:compute].delete_tags('vol-00000000', 'baz' => 'qux')
     end
 
   end

@@ -17,6 +17,8 @@ module Fog
         #     * 'addressesSet'<~Array>:
         #       * 'instanceId'<~String> - instance for ip address
         #       * 'publicIp'<~String> - ip address for instance
+        #
+        # {Amazon API Reference}[http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeAddresses.html]
         def describe_addresses(filters = {})
           unless filters.is_a?(Hash)
             Formatador.display_line("[yellow][WARN] describe_addresses with #{filters.class} param is deprecated, use describe_addresses('public-ip' => []) instead[/] [light_black](#{caller.first})[/]")
@@ -42,7 +44,7 @@ module Fog
 
           response = Excon::Response.new
 
-          addresses_set = @data[:addresses].values
+          addresses_set = self.data[:addresses].values
 
           aliases = {'public-ip' => 'publicIp', 'instance-id' => 'instanceId'}
           for filter_key, filter_value in filters

@@ -6,23 +6,27 @@ module Fog
 
       class Record < Fog::Model
         extend Fog::Deprecation
-        deprecate :ip, :value
-        deprecate :ip=, :value=
 
-        identity :id,           :aliases => "record_id"
-        attribute :name,        :aliases => "fqdn"
-        attribute :value,       :aliases => "rdata"
+        identity  :id,          :aliases => 'record_id'
+        attribute :fqdn
+        attribute :name,        :aliases => 'fqdn'
+        attribute :rdata
+        attribute :serial_style
         attribute :ttl
-        attribute :zone_id,     :aliases => "zone"
-        attribute :type,        :aliases => "record_type"
+        attribute :type,        :aliases => 'record_type'
+        attribute :value
+        attribute :zone_id,     :aliases => 'zone'
 
         def destroy
-          raise 'destroy not implemented'
+          requires :fqdn, :identity, :zone_id
+          connection.delete_record(zone_id, fqdn, identity)
+          true
         end
 
         def save
           raise 'save not implemented'
         end
+
       end
 
     end

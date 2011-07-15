@@ -4,7 +4,7 @@ module Fog
   class << self
 
     def available_providers
-      @providers.select {|provider| Kernel.const_get(provider).available?}
+      @available_providers ||= @providers.select {|provider| Kernel.const_get(provider).available?}.sort
     end
 
   end

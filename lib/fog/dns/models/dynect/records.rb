@@ -11,33 +11,35 @@ module Fog
 
         model Fog::Dynect::DNS::Record
 
-        def all(filter=nil)
-          selected_nodes = nodes
-          selected_nodes = nodes.select do |node|
-            node =~ /#{Regexp.escape(filter)}$/
-          end if filter
+        def all
+          requires :zone
+          data = []
+          connection.get_node_list(zone.domain).body['data'].each do |fqdn|
+            records = connection.get_record('ANY', zone.domain, fqdn).body['data']
 
-          data = selected_nodes.inject([]) do |m, node|
-            m += connection.list_any_records(zone.id, node).map(&:body)
-            m
+            # data in format ['/REST/xRecord/domain/fqdn/identity]
+            records.map! do |record|
+              tokens = record.split('/')
+              {
+                :identity => tokens.last,
+                :fqdn     => fqdn,
+                :type     => tokens[2][0...-6] # everything before 'Record'
+              }
+            end
+
+            data.concat(records)
           end
 
           load(data)
         end
 
         def get(record_id)
+          raise 'get is not implemented yet'
         end
 
         def new(attributes = {})
           requires :zone
           super({ :zone => zone }.merge!(attributes))
-        end
-
-        private
-
-        def nodes
-          requires :zone
-          Array(connection.node_list(zone.id).body)
         end
 
       end

@@ -106,7 +106,7 @@ module Fog
             response = authenticated_request(params)
           end
           unless response.body.empty?
-            response = ::MultiJson.encode(response.body)
+            response = ::MultiJson.decode(response.body)
           end
         end
 
@@ -131,7 +131,7 @@ module Fog
             :method   => 'POST',
             :body     => @authentication_body
           })
-          @oauth_token = ::MultiJson.encode(response.body)["access_token"]
+          @oauth_token = ::MultiJson.decode(response.body)["access_token"]
           return @oauth_token
         end
 
